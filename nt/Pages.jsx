@@ -224,6 +224,18 @@ function getSummaryMonthDailyData(yearMonth) {
   return store[yearMonth] || {};
 }
 
+async function fetchSummaryMonthDailyData(yearMonth) {
+  const payload = await apiFetch(`/api/summary-goals/${encodeURIComponent(yearMonth)}`);
+  return payload?.days && typeof payload.days === "object" ? payload.days : {};
+}
+
+async function saveSummaryDayValues(yearMonth, day, values = {}) {
+  await apiFetch(`/api/summary-goals/${encodeURIComponent(yearMonth)}/${encodeURIComponent(day)}`, {
+    method: "PUT",
+    body: JSON.stringify(values),
+  });
+}
+
 function setSummaryDayValues(yearMonth, day, values = {}) {
   const store = getSummaryDailyGoalsStore();
   if (!store[yearMonth]) store[yearMonth] = {};
@@ -1060,9 +1072,12 @@ export function SummaryPage() {
   const [goal, setGoal] = useState(() => getMonthlyGoalForMonth(month));
   const [goalDraft, setGoalDraft] = useState(() => String(getMonthlyGoalForMonth(month)));
   const [goalMessage, setGoalMessage] = useState("");
+  const [dailyGoals, setDailyGoals] = useState(() => getSummaryMonthDailyData(month));
+  const [dailyGoalsError, setDailyGoalsError] = useState("");
+  const [savingDayOff, setSavingDayOff] = useState("");
   const [dailyGoalsVersion, setDailyGoalsVersion] = useState(0);
   const monthRecords = useMemo(() => filterRecordsByMonth(records, month), [records, month]);
-  const monthDailyGoals = useMemo(() => getSummaryMonthDailyData(month), [month, dailyGoalsVersion]);
+  const monthDailyGoals = useMemo(() => dailyGoals || getSummaryMonthDailyData(month), [dailyGoals, month, dailyGoalsVersion]);
   const dailyRows = useMemo(() => {
     const incomeByDay = monthRecords.reduce((accumulator, record) => {
       const day = Number(String(record.date || "").slice(8, 10));
@@ -1135,6 +1150,44 @@ export function SummaryPage() {
     setGoalMessage("");
   }, [month]);
 
+  useEffect(() => {
+    let isMounted = true;
+    setDailyGoals(getSummaryMonthDailyData(month));
+    setDailyGoalsError("");
+
+    fetchSummaryMonthDailyData(month)
+      .then((days) => {
+        if (!isMounted) return;
+        setDailyGoals(days);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        setDailyGoalsError(error.message || "Não foi possível carregar as folgas salvas.");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [month, dailyGoalsVersion]);
+
+  const toggleDayOff = async (row) => {
+    const nextDayOff = !row.dayOff;
+    const dayKey = String(row.day);
+    const nextLocalStore = setSummaryDayValues(month, row.day, { dayOff: nextDayOff });
+    setDailyGoals(nextLocalStore[month] || {});
+    setDailyGoalsError("");
+    setSavingDayOff(dayKey);
+
+    try {
+      await saveSummaryDayValues(month, row.day, { dayOff: nextDayOff });
+    } catch (error) {
+      setDailyGoalsError(error.message || "Não foi possível salvar a folga.");
+    } finally {
+      setSavingDayOff("");
+      setDailyGoalsVersion((current) => current + 1);
+    }
+  };
+
   const saveMonthlyGoal = (event) => {
     event.preventDefault();
 
@@ -1178,6 +1231,11 @@ export function SummaryPage() {
       </form>
       <div className="card">
         <h2>Meta diária</h2>
+        {dailyGoalsError ? (
+          <p style={{ marginTop: 0, color: "#b91c1c", fontWeight: 700 }}>
+            {dailyGoalsError}
+          </p>
+        ) : null}
         <div className="summary-goals-grid">
           {dailyRows.map((row) => {
             const hitTarget = !row.dayOff && row.suggested > 0 && row.done >= row.suggested;
@@ -1208,12 +1266,10 @@ export function SummaryPage() {
                 <button
                   type="button"
                   className={row.dayOff ? "logout-btn" : "password-btn"}
-                  onClick={() => {
-                    setSummaryDayValues(month, row.day, { dayOff: !row.dayOff });
-                    setDailyGoalsVersion((current) => current + 1);
-                  }}
+                  disabled={savingDayOff === String(row.day)}
+                  onClick={() => toggleDayOff(row)}
                 >
-                  {row.dayOff ? "Remover folga" : "Marcar folga"}
+                  {savingDayOff === String(row.day) ? "Salvando..." : row.dayOff ? "Remover folga" : "Marcar folga"}
                 </button>
               </div>
             );

@@ -12,6 +12,7 @@ const authRouter = require('./routes/auth');
 const personalExpensesRouter = require('./routes/personal-expenses');
 const personalSheetRouter = require('./routes/personal-sheet');
 const adminNotesRouter = require('./routes/admin-notes');
+const summaryGoalsRouter = require('./routes/summary-goals');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'nt-driver-dev-secret';
@@ -119,6 +120,7 @@ app.use('/api/records', recordsRouter);
 app.use('/api/personal-expenses', personalExpensesRouter);
 app.use('/api/personal-sheet', personalSheetRouter);
 app.use('/api/admin-notes', adminNotesRouter);
+app.use('/api/summary-goals', summaryGoalsRouter);
 
 app.get('/healthz', (req, res) => {
   res.status(200).json({ ok: true, service: 'nt-driver' });

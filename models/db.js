@@ -492,6 +492,22 @@ const initPostgresDb = async () => {
   await query('CREATE INDEX IF NOT EXISTS idx_personal_sheet_values_user_year_month ON personal_sheet_values(user_id, year, month)');
 
   await query(`
+    CREATE TABLE IF NOT EXISTS summary_daily_goals (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      day_of_month INTEGER NOT NULL CHECK (day_of_month BETWEEN 1 AND 31),
+      goal DOUBLE PRECISION,
+      day_off BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, year_month, day_of_month)
+    )
+  `);
+
+  await query('CREATE INDEX IF NOT EXISTS idx_summary_daily_goals_user_month ON summary_daily_goals(user_id, year_month)');
+
+  await query(`
     CREATE OR REPLACE FUNCTION set_personal_sheet_values_updated_at()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -507,6 +523,24 @@ const initPostgresDb = async () => {
     BEFORE UPDATE ON personal_sheet_values
     FOR EACH ROW
     EXECUTE FUNCTION set_personal_sheet_values_updated_at()
+  `);
+
+  await query(`
+    CREATE OR REPLACE FUNCTION set_summary_daily_goals_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  await query('DROP TRIGGER IF EXISTS trg_summary_daily_goals_updated_at ON summary_daily_goals');
+  await query(`
+    CREATE TRIGGER trg_summary_daily_goals_updated_at
+    BEFORE UPDATE ON summary_daily_goals
+    FOR EACH ROW
+    EXECUTE FUNCTION set_summary_daily_goals_updated_at()
   `);
 };
 
@@ -618,6 +652,18 @@ const initSqliteDb = async () => {
       UNIQUE (user_id, row_id, year, month)
     );
 
+    CREATE TABLE IF NOT EXISTS summary_daily_goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      day_of_month INTEGER NOT NULL CHECK (day_of_month BETWEEN 1 AND 31),
+      goal REAL,
+      day_off INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, year_month, day_of_month)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_records_user_id ON records(user_id);
     CREATE INDEX IF NOT EXISTS idx_records_user_date ON records(user_id, date);
     CREATE INDEX IF NOT EXISTS idx_personal_expenses_user_id ON personal_expenses(user_id);
@@ -631,6 +677,7 @@ const initSqliteDb = async () => {
     CREATE INDEX IF NOT EXISTS idx_email_verification_hash ON email_verification_tokens(token_hash);
     CREATE INDEX IF NOT EXISTS idx_personal_sheet_rows_user ON personal_sheet_rows(user_id, kind, sort_order, id);
     CREATE INDEX IF NOT EXISTS idx_personal_sheet_values_user_year_month ON personal_sheet_values(user_id, year, month);
+    CREATE INDEX IF NOT EXISTS idx_summary_daily_goals_user_month ON summary_daily_goals(user_id, year_month);
   `);
 
   await ensureSqliteColumn('users', 'profile_type', "TEXT NOT NULL DEFAULT 'driver'");
