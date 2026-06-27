@@ -446,6 +446,130 @@ function PageTabs({ tabs, activeTab, onChange }) {
   );
 }
 
+function getExpenseKanbanColumns(month) {
+  const totalWeeks = Math.max(1, Math.ceil(getDaysInMonth(month) / 7));
+  return Array.from({ length: totalWeeks }, (_, index) => {
+    const weekNumber = index + 1;
+    return {
+      key: `week-${weekNumber}`,
+      rangeLabel: getMonthWeekRangeLabel(month, weekNumber),
+    };
+  });
+}
+
+const expenseKanbanStatusColumns = [
+  { key: "pending", label: "Pendentes" },
+  { key: "paid", label: "Pagas" },
+  { key: "overdue", label: "Vencidas" },
+];
+
+function ExpenseKanban({ rows, month, onToggleStatus, onEdit, isSaving }) {
+  const weekOptions = useMemo(() => getExpenseKanbanColumns(month), [month]);
+  const [activeWeek, setActiveWeek] = useState(() => weekOptions[0]?.key || "week-1");
+  const activeWeekNumber = Number(String(activeWeek).replace("week-", "")) || 1;
+
+  useEffect(() => {
+    setActiveWeek((current) => (weekOptions.some((column) => column.key === current) ? current : weekOptions[0]?.key || "week-1"));
+  }, [weekOptions]);
+
+  const columns = useMemo(() => {
+    const grouped = expenseKanbanStatusColumns.reduce((accumulator, column) => {
+      accumulator[column.key] = [];
+      return accumulator;
+    }, {});
+    const today = new Date().toISOString().slice(0, 10);
+
+    rows
+      .filter((item) => getWeekNumberInMonth(getPersonalExpenseDateForMonth(item, month)) === activeWeekNumber)
+      .forEach((item) => {
+        const dueDate = getPersonalExpenseDateForMonth(item, month);
+        const columnKey = item.month_status === "pago" ? "paid" : (dueDate < today ? "overdue" : "pending");
+        grouped[columnKey].push(item);
+      });
+
+    Object.keys(grouped).forEach((key) => {
+      grouped[key].sort((left, right) => {
+        const leftDate = getPersonalExpenseDateForMonth(left, month);
+        const rightDate = getPersonalExpenseDateForMonth(right, month);
+        return leftDate.localeCompare(rightDate) || String(left.description || "").localeCompare(String(right.description || ""));
+      });
+    });
+
+    return grouped;
+  }, [rows, month, activeWeekNumber]);
+
+  return (
+    <>
+      <div className="expenses-kanban-filter">
+        <label htmlFor="expenses-kanban-week">Semana</label>
+        <select id="expenses-kanban-week" value={activeWeek} onChange={(event) => setActiveWeek(event.target.value)}>
+          {weekOptions.map((column) => (
+            <option key={column.key} value={column.key}>
+              {column.rangeLabel}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="expenses-kanban">
+        {expenseKanbanStatusColumns.map((column) => {
+          const columnRows = columns[column.key] || [];
+          const total = columnRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+          return (
+            <section key={column.key} className={`expenses-kanban-column ${column.key}`}>
+              <div className="expenses-kanban-column-header">
+                <div>
+                  <h2>{column.label}</h2>
+                  <span>{columnRows.length} itens</span>
+                </div>
+                <div className="expenses-kanban-column-summary">
+                  <strong>{currency(total)}</strong>
+                </div>
+              </div>
+
+              <div className="expenses-kanban-list">
+                {columnRows.length ? (
+                  columnRows.map((item) => (
+                    <article key={item.entry_key} className="expenses-kanban-card">
+                      <div className="expenses-kanban-card-top">
+                        <strong>{item.description || "Sem descricao"}</strong>
+                        <span>{currency(item.amount)}</span>
+                      </div>
+                      <div className="expenses-kanban-card-meta">
+                        <span>{getPersonalExpenseCategoryLabel(item.category || "Outros")}</span>
+                        <span>{formatDate(getPersonalExpenseDateForMonth(item, month))}</span>
+                      </div>
+                      <span className={`status-pill ${item.month_status === "pago" ? "paid" : "pending"}`}>
+                        {item.month_status === "pago" ? "Pago" : "Pendente"}
+                      </span>
+                      <div className="expenses-kanban-card-actions">
+                        <button
+                          type="button"
+                          className={item.month_status === "pago" ? "auth-outline-button" : "password-btn"}
+                          disabled={isSaving}
+                          onClick={() => onToggleStatus(item.entry_key)}
+                        >
+                          {item.month_status === "pago" ? "Reabrir" : "Dar baixa"}
+                        </button>
+                        <button type="button" className="auth-outline-button" onClick={() => onEdit(item)}>
+                          Editar
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <p className="expenses-kanban-empty">Nenhuma despesa.</p>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function PerformanceMetricCards({ metrics }) {
   const tones = ["card-green", "card-red", "card-blue", "card-orange"];
 
@@ -725,7 +849,7 @@ export function RegisterPage() {
     <>
       <PageHeader title="Registrar" centered />
       <div
-        className="card"
+        className="card register-kanban-shell"
         style={{
           padding: 0,
           overflow: "hidden",
@@ -1238,8 +1362,9 @@ export function SummaryPage() {
         ) : null}
         <div className="summary-goals-grid">
           {dailyRows.map((row) => {
-            const hitTarget = !row.dayOff && row.suggested > 0 && row.done >= row.suggested;
-            const statusClassName = row.dayOff ? "is-dayoff" : (hitTarget ? "is-hit" : "is-missed");
+            const hasEntry = !row.dayOff && row.done > 0;
+            const hitTarget = hasEntry && row.suggested > 0 && row.done >= row.suggested;
+            const statusClassName = row.dayOff ? "is-dayoff" : (!hasEntry ? "is-empty" : (hitTarget ? "is-hit" : "is-missed"));
             const statusLabel = row.dayOff ? "Folga" : (hitTarget ? "Meta batida" : "Meta não batida");
 
             return (
@@ -1249,7 +1374,7 @@ export function SummaryPage() {
                     <strong>{String(row.day).padStart(2, "0")}</strong>
                     <span>{row.weekday}</span>
                   </div>
-                  <span className="summary-goal-status">{statusLabel}</span>
+                  <span className="summary-goal-status">{row.dayOff ? "Folga" : (!hasEntry ? "Não preenchido" : statusLabel)}</span>
                 </div>
 
                 <div className="summary-goal-card-values">
@@ -1287,7 +1412,7 @@ export function ExpensesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState({ text: "", tone: "success" });
   const month = expensesMonth || getCurrentMonthKey();
-  const [activeTab, setActiveTab] = useState("list");
+  const [activeTab, setActiveTab] = useState("kanban");
   const [editingKey, setEditingKey] = useState("");
   const [form, setForm] = useState({
     description: "",
@@ -1345,6 +1470,7 @@ export function ExpensesPage() {
     ? `conic-gradient(${chartSegments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ")})`
     : "conic-gradient(#e2e8f0 0 100%)";
   const tabs = [
+    { key: "kanban", label: "Kanban" },
     { key: "list", label: "Lista" },
     { key: "summary", label: "Resumo" },
   ];
@@ -1541,6 +1667,18 @@ export function ExpensesPage() {
       </div>
       <PageHeader title="Despesas pessoais" centered />
       <PageTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+
+      {activeTab === "kanban" ? (
+        <div className="expenses-tab-content">
+          <ExpenseKanban
+            rows={expenseRows}
+            month={month}
+            onToggleStatus={handleToggleStatus}
+            onEdit={handleEditExpense}
+            isSaving={isSaving}
+          />
+        </div>
+      ) : null}
 
       {activeTab === "summary" ? (
         <div className="expenses-tab-content">
@@ -2499,7 +2637,7 @@ export function PersonalDespesasPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState({ text: "", tone: "success" });
-  const [activeTab, setActiveTab] = useState("list");
+  const [activeTab, setActiveTab] = useState("kanban");
   const [editingKey, setEditingKey] = useState("");
   const [form, setForm] = useState({
     description: "",
@@ -2576,6 +2714,7 @@ export function PersonalDespesasPage() {
     ? `conic-gradient(${chartSegments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ")})`
     : "conic-gradient(#e2e8f0 0 100%)";
   const tabs = [
+    { key: "kanban", label: "Kanban" },
     { key: "list", label: "Lista" },
     { key: "summary", label: "Resumo" },
   ];
@@ -2738,6 +2877,18 @@ export function PersonalDespesasPage() {
       </div>
       <PageHeader title="Despesas pessoais" centered />
       <PageTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+
+      {activeTab === "kanban" ? (
+        <div className="expenses-tab-content">
+          <ExpenseKanban
+            rows={expenseRows}
+            month={month}
+            onToggleStatus={handleToggleStatus}
+            onEdit={handleEditExpense}
+            isSaving={isSaving}
+          />
+        </div>
+      ) : null}
 
       {activeTab === "summary" ? (
         <div className="expenses-tab-content">

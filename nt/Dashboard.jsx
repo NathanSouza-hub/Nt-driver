@@ -128,6 +128,31 @@ function getPersonalExpenseStatusForMonth(item, monthKey) {
   return getMonthlyStatus(item.status_months, targetMonth, item.status, item.date?.slice(0, 7));
 }
 
+function getDaysInMonth(monthKey) {
+  const [year, month] = String(monthKey || "").split("-").map(Number);
+  if (!year || !month) return 31;
+  return new Date(year, month, 0).getDate();
+}
+
+function getCurrentMonthWeekRange() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  const weekNumber = Math.max(1, Math.ceil(today.getDate() / 7));
+  const startDay = ((weekNumber - 1) * 7) + 1;
+  const endDay = Math.min(weekNumber * 7, getDaysInMonth(monthKey));
+  const startDate = `${monthKey}-${String(startDay).padStart(2, "0")}`;
+  const endDate = `${monthKey}-${String(endDay).padStart(2, "0")}`;
+
+  return {
+    monthKey,
+    startDate,
+    endDate,
+    label: `${String(startDay).padStart(2, "0")}/${String(month).padStart(2, "0")} a ${String(endDay).padStart(2, "0")}/${String(month).padStart(2, "0")}`,
+  };
+}
+
 export default function Dashboard() {
   const { records, dashboardMonth } = useOutletContext();
   const [personalExpenses, setPersonalExpenses] = useState([]);
@@ -182,7 +207,34 @@ export default function Dashboard() {
       .sort((left, right) => left.dayDiff - right.dayDiff || left.dueDate.localeCompare(right.dueDate))
       .slice(0, 3);
   }, [personalExpenses]);
-  const reminderCardClassName = `dashboard-reminder-card${!dueReminders.length || reminderError ? " is-empty" : ""}`;
+  const weeklyPaymentReminder = useMemo(() => {
+    const weekRange = getCurrentMonthWeekRange();
+    const seen = new Set();
+    const items = personalExpenses
+      .filter((item) => isPersonalExpenseVisibleInMonth(item, weekRange.monthKey))
+      .map((item) => {
+        const dueDate = getPersonalExpenseDateForMonth(item, weekRange.monthKey);
+        return {
+          key: `${item.entry_key || item.id || item.description}-${dueDate}`,
+          amount: Number(item.amount || 0),
+          dueDate,
+        };
+      })
+      .filter((item) => item.dueDate >= weekRange.startDate && item.dueDate <= weekRange.endDate)
+      .filter((item) => {
+        if (seen.has(item.key)) return false;
+        seen.add(item.key);
+        return true;
+      });
+
+    return {
+      ...weekRange,
+      total: items.reduce((sum, item) => sum + item.amount, 0),
+      count: items.length,
+    };
+  }, [personalExpenses]);
+  const hasReminderContent = dueReminders.length || weeklyPaymentReminder.total > 0;
+  const reminderCardClassName = `dashboard-reminder-card${!hasReminderContent || reminderError ? " is-empty" : ""}`;
 
   useEffect(() => {
     let isMounted = true;
@@ -215,23 +267,30 @@ export default function Dashboard() {
       </div>
 
       <div className={reminderCardClassName} aria-live="polite">
-        <div className="dashboard-reminder-icon">{dueReminders.length && !reminderError ? "!" : "i"}</div>
+        <div className="dashboard-reminder-icon">{hasReminderContent && !reminderError ? "!" : "i"}</div>
         <div className="dashboard-reminder-content">
           <strong>Lembrete de vencimento</strong>
           {reminderError ? (
             <p>Não foi possível carregar as contas com vencimento próximo.</p>
-          ) : dueReminders.length ? (
-            <ul className="dashboard-reminder-list">
-              {dueReminders.map((item) => (
-                <li key={item.key}>
-                  <span>{item.description}</span>
-                  {" "}
-                  <strong>
-                    {getDueLabel(item.dayDiff, item.dueDate)} - {currency(item.amount)}
-                  </strong>
-                </li>
-              ))}
-            </ul>
+          ) : hasReminderContent ? (
+            <>
+              <p className="dashboard-weekly-reminder">
+                Semana {weeklyPaymentReminder.label}: <strong>{currency(weeklyPaymentReminder.total)}</strong> em contas da semana
+              </p>
+              {dueReminders.length ? (
+                <ul className="dashboard-reminder-list">
+                  {dueReminders.map((item) => (
+                    <li key={item.key}>
+                      <span>{item.description}</span>
+                      {" "}
+                      <strong>
+                        {getDueLabel(item.dayDiff, item.dueDate)} - {currency(item.amount)}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
           ) : (
             <p>Nenhuma conta pendente vence nos próximos 7 dias.</p>
           )}

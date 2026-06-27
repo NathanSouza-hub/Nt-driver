@@ -1321,6 +1321,24 @@ select {
   line-height: 1.45;
 }
 
+.dashboard-reminder-content .dashboard-weekly-reminder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(217, 119, 6, 0.1);
+  color: #92400e;
+  font-weight: 700;
+}
+
+.dashboard-reminder-content .dashboard-weekly-reminder strong {
+  color: #78350f;
+  font-size: 1rem;
+}
+
 .dashboard-reminder-list {
   margin: 0;
   padding-left: 18px;
@@ -1761,23 +1779,50 @@ select {
   padding: 18px;
   border-radius: 20px;
   border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 247, 255, 0.94) 100%);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
 .summary-goal-card.is-hit {
-  background: linear-gradient(135deg, rgba(22, 163, 74, 0.12) 0%, rgba(240, 253, 244, 0.98) 100%);
-  border-color: rgba(22, 163, 74, 0.3);
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  border-color: transparent;
+  color: #ffffff;
 }
 
-.summary-goal-card.is-missed,
-.summary-goal-card.is-dayoff {
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.12) 0%, rgba(254, 242, 242, 0.98) 100%);
-  border-color: rgba(220, 38, 38, 0.24);
+.summary-goal-card.is-missed {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  border-color: transparent;
+  color: #ffffff;
 }
 
 .summary-goal-card.is-dayoff {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(255, 251, 235, 0.98) 100%);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  border-color: transparent;
+  color: #0f172a;
+}
+
+.summary-goal-card.is-hit .summary-goal-card-header strong,
+.summary-goal-card.is-missed .summary-goal-card-header strong,
+.summary-goal-card.is-hit .summary-goal-card-header span,
+.summary-goal-card.is-missed .summary-goal-card-header span {
+  color: #ffffff;
+}
+
+.summary-goal-card.is-hit .summary-goal-card-values span {
+  color: #14532d;
+}
+
+.summary-goal-card.is-missed .summary-goal-card-values span,
+.summary-goal-card.is-hit .summary-goal-card-values strong,
+.summary-goal-card.is-missed .summary-goal-card-values strong {
+  color: #0f172a;
+}
+
+.summary-goal-card.is-dayoff .summary-goal-card-header strong,
+.summary-goal-card.is-dayoff .summary-goal-card-header span,
+.summary-goal-card.is-dayoff .summary-goal-card-values span,
+.summary-goal-card.is-dayoff .summary-goal-card-values strong {
+  color: #0f172a;
 }
 
 .summary-goal-card-header {
@@ -2650,6 +2695,218 @@ select {
   gap: 20px;
 }
 
+.expenses-kanban {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.expenses-kanban-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 247, 255, 0.94) 100%);
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+
+.expenses-kanban-filter label {
+  color: #1e3a8a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.expenses-kanban-filter select {
+  min-width: 190px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  padding: 10px 38px 10px 14px;
+  background: #ffffff;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.expenses-kanban-column {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border-radius: 18px;
+  padding: 14px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96) 0%, rgba(242, 247, 255, 0.94) 100%);
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  border-top: 4px solid #2563eb;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  animation: kanbanColumnIn 220ms ease both;
+}
+
+.expenses-kanban-column.pending {
+  border-top-color: #2563eb;
+  background: linear-gradient(165deg, rgba(239, 246, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+.expenses-kanban-column.overdue {
+  border-top-color: #dc2626;
+  background: linear-gradient(165deg, rgba(254, 242, 242, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+.expenses-kanban-column.paid {
+  border-top-color: #16a34a;
+  background: linear-gradient(165deg, rgba(240, 253, 244, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
+}
+
+.expenses-kanban-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.expenses-kanban-column-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.expenses-kanban-column.pending .expenses-kanban-column-header h2 {
+  color: #1d4ed8;
+}
+
+.expenses-kanban-column.overdue .expenses-kanban-column-header h2 {
+  color: #b91c1c;
+}
+
+.expenses-kanban-column.paid .expenses-kanban-column-header h2 {
+  color: #15803d;
+}
+
+.expenses-kanban-column-header span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.expenses-kanban-column-header strong {
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.expenses-kanban-column-summary {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.expenses-kanban-column-summary span {
+  margin: 0;
+}
+
+.expenses-kanban-list {
+  display: grid;
+  gap: 10px;
+}
+
+.expenses-kanban-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+  position: relative;
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  animation: kanbanCardIn 240ms ease both;
+}
+
+.expenses-kanban-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: #2563eb;
+}
+
+.expenses-kanban-column.overdue .expenses-kanban-card::before {
+  background: #dc2626;
+}
+
+.expenses-kanban-column.paid .expenses-kanban-card::before {
+  background: #16a34a;
+}
+
+.expenses-kanban-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+}
+
+.expenses-kanban-card-top,
+.expenses-kanban-card-meta,
+.expenses-kanban-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.expenses-kanban-card-top strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.expenses-kanban-card-top span {
+  flex: 0 0 auto;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.expenses-kanban-card-meta {
+  align-items: flex-start;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.expenses-kanban-card-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.expenses-kanban-empty {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+@keyframes kanbanColumnIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes kanbanCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .expenses-summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -3082,10 +3339,128 @@ select {
   }
 }
 
+@media (max-width: 1000px) {
+  .register-kanban-shell form > div:first-child {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .register-kanban-shell form {
+    padding: 16px !important;
+  }
+
+  .register-kanban-shell form > div:nth-child(2) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .register-kanban-shell form > div:last-child {
+    align-items: stretch !important;
+  }
+
+  .register-kanban-shell form > div:last-child button {
+    width: 100%;
+  }
+}
+
 .register-card h3 {
   margin: 0;
   font-size: 1rem;
   color: var(--muted);
+}
+
+.register-kanban-shell {
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08) !important;
+}
+
+.register-kanban-shell > div:first-child {
+  padding: 22px 24px !important;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 58%, #f0fdf4 100%) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.register-kanban-shell > div:first-child strong {
+  display: block;
+  font-size: 1.1rem !important;
+  color: #0f172a !important;
+}
+
+.register-kanban-shell form {
+  padding: 24px !important;
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.register-kanban-shell form > div:first-child {
+  display: grid !important;
+  grid-template-columns: minmax(190px, 0.75fr) minmax(240px, 1fr) minmax(260px, 1.15fr) !important;
+  gap: 16px !important;
+  align-items: start;
+}
+
+.register-kanban-shell form > div:first-child > div,
+.register-kanban-shell form > div:nth-child(2),
+.register-kanban-shell form > div:nth-child(3) {
+  position: relative;
+  display: grid !important;
+  gap: 12px !important;
+  padding: 18px !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07);
+  animation: kanbanCardIn 220ms ease both;
+}
+
+.register-kanban-shell form > div:first-child > div:nth-child(1),
+.register-kanban-shell form > div:nth-child(2),
+.register-kanban-shell form > div:nth-child(3) {
+  background: linear-gradient(165deg, rgba(239, 246, 255, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%) !important;
+}
+
+.register-kanban-shell form > div:first-child > div:nth-child(2) {
+  background: linear-gradient(165deg, rgba(240, 253, 244, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%) !important;
+  border-top: 4px solid #16a34a !important;
+}
+
+.register-kanban-shell form > div:first-child > div:nth-child(3) {
+  background: linear-gradient(165deg, rgba(254, 242, 242, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%) !important;
+  border-top: 4px solid #dc2626 !important;
+}
+
+.register-kanban-shell form > div:first-child > div:nth-child(1),
+.register-kanban-shell form > div:nth-child(2),
+.register-kanban-shell form > div:nth-child(3) {
+  border-top: 4px solid #2563eb !important;
+}
+
+.register-kanban-shell label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.register-kanban-shell input,
+.register-kanban-shell textarea {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.register-kanban-shell form > div:nth-child(2) {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.register-kanban-shell form > div:nth-child(3) textarea {
+  min-height: 120px !important;
+}
+
+.register-kanban-shell form > div:last-child {
+  padding-top: 6px !important;
 }
 
 .register-personal-card {
@@ -3337,6 +3712,10 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .expenses-kanban {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .expenses-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3484,6 +3863,10 @@ select {
 }
 
 @media (max-width: 640px) {
+  .expenses-kanban {
+    grid-template-columns: 1fr;
+  }
+
   .expenses-summary-grid {
     grid-template-columns: 1fr;
   }
