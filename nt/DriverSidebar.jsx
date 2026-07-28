@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { getProfileTypeLabel, isPessoalProfile } from "./profile-type";
+import { getProfileTypeLabel } from "./profile-type";
 
 function SidebarBrandLogo({ homePath, homeLabel }) {
   return (
@@ -97,12 +97,6 @@ const icons = {
   ),
 };
 
-const personalPrimaryItems = [
-  { to: "/driver/receitas", label: "Receitas", icon: icons.register },
-  { to: "/driver/despesas", label: "Despesas", icon: icons.expenses },
-  { to: "/driver/resumo", label: "Resumo", icon: icons.dashboard },
-];
-
 const driverPrimaryItems = [
   { to: "/driver", label: "Dashboard", icon: icons.dashboard, end: true },
   { to: "/driver/register", label: "Registrar", icon: icons.register },
@@ -113,28 +107,23 @@ const driverPrimaryItems = [
 ];
 
 export default function DriverSidebar({ user }) {
-  const isPersonalProfile = isPessoalProfile(user?.profileType);
-  const primaryItems = isPersonalProfile ? personalPrimaryItems : driverPrimaryItems;
-  const adminItems = user?.isAdmin && !isPersonalProfile
+  const adminItems = user?.isAdmin
     ? [
         { to: "/driver/notes", label: "Bloco de notas", icon: icons.notes },
         { to: "/driver/users", label: "Usuários", icon: icons.users },
       ]
     : [];
 
-  const navItems = [...primaryItems, ...adminItems];
+  const navItems = [...driverPrimaryItems, ...adminItems];
 
   return (
     <aside className="sidebar">
 
       <div className="sidebar-header">
-        <SidebarBrandLogo
-          homePath={isPersonalProfile ? "/driver/register" : "/driver"}
-          homeLabel={isPersonalProfile ? "Ir para Registrar" : "Ir para o Dashboard"}
-        />
+        <SidebarBrandLogo homePath="/driver" homeLabel="Ir para o Dashboard" />
       </div>
 
-      <nav className="sidebar-nav" aria-label={isPersonalProfile ? "Navegação pessoal" : "Navegação do motorista"}>
+      <nav className="sidebar-nav" aria-label="Navegação do motorista">
         {navItems.map((item) => (
           <NavLink
             key={item.label}

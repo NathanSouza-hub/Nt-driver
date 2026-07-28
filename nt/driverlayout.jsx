@@ -2,24 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getCurrentMonthKey, getMonthLabel, getMonthOptions } from "./driver-data";
 import { apiFetch } from "./http";
-import { isPessoalProfile } from "./profile-type";
 import AuthScreen from "./AuthScreen";
 import DriverSidebar from "./DriverSidebar";
 
 export default function DriverLayout() {
-  const personalAllowedPaths = useMemo(
-    () => new Set([
-      "/driver",
-      "/driver/register",
-      "/driver/history",
-      "/driver/expenses",
-      "/driver/profile",
-      "/driver/receitas",
-      "/driver/despesas",
-      "/driver/resumo"
-    ]),
-    []
-  );
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState(null);
@@ -150,14 +136,6 @@ export default function DriverLayout() {
 
   if (!user) {
     return <AuthScreen canRegister={canRegister} onLogin={handleLogin} onRegister={handleRegister} />;
-  }
-
-  if (isPessoalProfile(user.profileType) && location.pathname === "/driver") {
-    return <Navigate to="/driver/register" replace />;
-  }
-
-  if (isPessoalProfile(user.profileType) && !personalAllowedPaths.has(location.pathname)) {
-    return <Navigate to="/driver/register" replace />;
   }
 
   return (

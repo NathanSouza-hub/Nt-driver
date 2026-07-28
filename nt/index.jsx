@@ -13,11 +13,6 @@ import {
   SummaryPage,
   UsersPage,
 } from "./Pages";
-import {
-  PersonalReceitasPage,
-  PersonalDespesasPage,
-  PersonalResumoPage,
-} from "./Pages";
 
 const root = createRoot(document.getElementById("root"));
 
@@ -36,9 +31,6 @@ root.render(
           <Route path="notes" element={<NotesPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="receitas" element={<PersonalReceitasPage />} />
-          <Route path="despesas" element={<PersonalDespesasPage />} />
-          <Route path="resumo" element={<PersonalResumoPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/driver" replace />} />
       </Routes>

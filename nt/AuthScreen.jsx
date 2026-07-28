@@ -419,15 +419,6 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                 onChange={(event) => setRegisterForm((current) => ({ ...current, celular: event.target.value }))}
                 required
               />
-              <label htmlFor="register-profile" style={{ fontWeight: 600, color: '#0f172a' }}>Perfil</label>
-              <select
-                id="register-profile"
-                value={registerForm.profileType}
-                onChange={(event) => setRegisterForm((current) => ({ ...current, profileType: event.target.value }))}
-              >
-                <option value="driver">Motorista</option>
-                <option value="pessoal">Pessoal</option>
-              </select>
               <label htmlFor="register-password" style={{ fontWeight: 600, color: '#0f172a' }}>Senha</label>
               <div className="auth-password-field">
                 <input
