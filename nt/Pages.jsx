@@ -123,6 +123,13 @@ function formatLastSeenLabel(value) {
   return `${date.toLocaleDateString("pt-BR")} às ${timeLabel}`;
 }
 
+function getSubscriptionLabel(row) {
+  if (row.subscription_active) return "Ativo";
+  if (row.subscription_status === "pending_review") return "Aguardando confirmação";
+  if (row.subscription_status === "trial") return "Teste expirado";
+  return "Pendente";
+}
+
 function getSummaryDailyGoalsStore() {
   try {
     const raw = localStorage.getItem(SUMMARY_DAILY_GOALS_KEY);
@@ -2262,6 +2269,17 @@ export function UsersPage() {
     }
   };
 
+  const activateSubscription = async (id) => {
+    try {
+      setMessage("");
+      await apiFetch(`/api/auth/users/${id}/activate-subscription`, { method: "POST" });
+      await loadUsers();
+      setMessage("Acesso liberado.");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+
   if (!user?.isAdmin) {
     return (
       <div className="card">
@@ -2295,6 +2313,7 @@ export function UsersPage() {
                 <th>Nome</th>
                 <th>Email</th>
                 <th>Perfil</th>
+                <th>Assinatura</th>
                 <th>Visto por último</th>
                 <th>Ações</th>
               </tr>
@@ -2305,8 +2324,14 @@ export function UsersPage() {
                   <td>{row.name}</td>
                   <td>{row.email}</td>
                   <td>{getProfileTypeLabel(row.profile_type)}</td>
+                  <td>{getSubscriptionLabel(row)}</td>
                   <td>{formatLastSeenLabel(row.last_login_at)}</td>
-                  <td>
+                  <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {!row.subscription_active ? (
+                      <button type="button" className="auth-outline-button" onClick={() => activateSubscription(row.id)}>
+                        Liberar acesso
+                      </button>
+                    ) : null}
                     {Number(row.id) === Number(user?.id) ? (
                       <span>Sua conta</span>
                     ) : (

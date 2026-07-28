@@ -300,6 +300,29 @@ const initPostgresDb = async () => {
     END $$;
   `);
 
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_trial_ends_at TIMESTAMPTZ');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_activated_at TIMESTAMPTZ');
+  await query(`
+    UPDATE users
+    SET subscription_status = 'active', subscription_activated_at = NOW()
+    WHERE subscription_status IS NULL
+  `);
+  await query("ALTER TABLE users ALTER COLUMN subscription_status SET DEFAULT 'trial'");
+  await query('ALTER TABLE users ALTER COLUMN subscription_status SET NOT NULL');
+  await query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'users_subscription_status_check'
+      ) THEN
+        ALTER TABLE users
+        ADD CONSTRAINT users_subscription_status_check
+        CHECK (subscription_status IN ('trial', 'pending_review', 'active'));
+      END IF;
+    END $$;
+  `);
+
   await query(`
     CREATE TABLE IF NOT EXISTS records (
       id BIGSERIAL PRIMARY KEY,
@@ -560,7 +583,10 @@ const initSqliteDb = async () => {
       email_verification_required INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       last_login_at TEXT,
-      profile_type TEXT NOT NULL DEFAULT 'driver' CHECK (profile_type IN ('driver', 'personal'))
+      profile_type TEXT NOT NULL DEFAULT 'driver' CHECK (profile_type IN ('driver', 'personal')),
+      subscription_status TEXT NOT NULL DEFAULT 'trial' CHECK (subscription_status IN ('trial', 'pending_review', 'active')),
+      subscription_trial_ends_at TEXT,
+      subscription_activated_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS records (
@@ -684,6 +710,9 @@ const initSqliteDb = async () => {
   await ensureSqliteColumn('users', 'last_login_at', 'TEXT');
   await ensureSqliteColumn('users', 'email_verified_at', 'TEXT');
   await ensureSqliteColumn('users', 'email_verification_required', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureSqliteColumn('users', 'subscription_status', 'TEXT');
+  await ensureSqliteColumn('users', 'subscription_trial_ends_at', 'TEXT');
+  await ensureSqliteColumn('users', 'subscription_activated_at', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'entry_key', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'status_months', 'TEXT');
   await ensureSqliteColumn('personal_sheet_values', 'day_of_month', 'INTEGER');
@@ -692,6 +721,12 @@ const initSqliteDb = async () => {
     UPDATE users
     SET profile_type = 'driver'
     WHERE profile_type IS NULL OR profile_type = ''
+  `);
+
+  await query(`
+    UPDATE users
+    SET subscription_status = 'active', subscription_activated_at = CURRENT_TIMESTAMP
+    WHERE subscription_status IS NULL OR subscription_status = ''
   `);
 
   await query(`

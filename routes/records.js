@@ -1,10 +1,11 @@
 const express = require('express');
 const db = require('../models/db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireActiveSubscription } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.use(requireAuth);
+router.use(requireActiveSubscription);
 
 router.get('/', async (req, res) => {
   try {

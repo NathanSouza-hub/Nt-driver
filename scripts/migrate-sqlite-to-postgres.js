@@ -59,8 +59,21 @@ const migrate = async () => {
         userIdMap[user.id] = exists.id;
       } else {
         const result = await db.query(
-          'INSERT INTO users (name, email, password_hash, is_admin, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-          [user.name, user.email, user.password_hash, user.is_admin, user.created_at]
+          `INSERT INTO users (
+            name, email, password_hash, is_admin, profile_type,
+            email_verified_at, email_verification_required, created_at, last_login_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+          [
+            user.name,
+            user.email,
+            user.password_hash,
+            user.is_admin,
+            user.profile_type || 'driver',
+            user.email_verified_at || null,
+            user.email_verification_required || false,
+            user.created_at,
+            user.last_login_at || null
+          ]
         );
         const newId = result.rows[0]?.id;
         userIdMap[user.id] = newId;
@@ -124,16 +137,18 @@ const migrate = async () => {
         console.log(`  ✓ despesa ja existe: id=${exists.id}, ${expense.description}`);
       } else {
         await db.query(
-          `INSERT INTO personal_expenses (user_id, description, amount, type, category, account, status, date, due_day, installments, is_fixed, installments_start_month, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+          `INSERT INTO personal_expenses (user_id, entry_key, description, amount, type, category, account, status, status_months, date, due_day, installments, is_fixed, installments_start_month, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
           [
             newUserId,
+            expense.entry_key || `expense-${expense.id}`,
             expense.description,
             expense.amount,
             expense.type || 'saida',
             expense.category || 'outros',
             expense.account || 'outros',
             expense.status || 'pendente',
+            expense.status_months || null,
             expense.date,
             expense.due_day,
             expense.installments,
@@ -144,6 +159,48 @@ const migrate = async () => {
         );
         console.log(`  + despesa criada: id=${expense.id}, ${expense.description}`);
       }
+    }
+
+    const documents = await all('SELECT * FROM admin_note_documents ORDER BY id ASC');
+    console.log(`\n[documentos de notas] Encontrados ${documents.length} documento(s) no SQLite`);
+
+    for (const document of documents) {
+      const newUserId = userIdMap[document.user_id];
+      if (!newUserId) continue;
+      const exists = await db.get(
+        'SELECT id FROM admin_note_documents WHERE user_id = $1 AND title = $2 AND content_html = $3',
+        [newUserId, document.title, document.content_html]
+      );
+      if (!exists) {
+        await db.query(
+          `INSERT INTO admin_note_documents (user_id, title, content_html, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [newUserId, document.title, document.content_html, document.created_at, document.updated_at]
+        );
+      }
+    }
+
+    const dailyGoals = await all('SELECT * FROM summary_daily_goals ORDER BY id ASC');
+    console.log(`\n[metas diarias] Encontradas ${dailyGoals.length} meta(s) no SQLite`);
+
+    for (const dailyGoal of dailyGoals) {
+      const newUserId = userIdMap[dailyGoal.user_id];
+      if (!newUserId) continue;
+      await db.query(
+        `INSERT INTO summary_daily_goals (user_id, year_month, day_of_month, goal, day_off, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (user_id, year_month, day_of_month)
+         DO UPDATE SET goal = EXCLUDED.goal, day_off = EXCLUDED.day_off, updated_at = EXCLUDED.updated_at`,
+        [
+          newUserId,
+          dailyGoal.year_month,
+          dailyGoal.day_of_month,
+          dailyGoal.goal,
+          Boolean(dailyGoal.day_off),
+          dailyGoal.created_at,
+          dailyGoal.updated_at
+        ]
+      );
     }
 
     const tokens = await all('SELECT * FROM password_reset_tokens ORDER BY id ASC');
@@ -183,6 +240,8 @@ const migrate = async () => {
     console.log(`  - ${users.length} usuario(s)`);
     console.log(`  - ${records.length} registro(s)`);
     console.log(`  - ${expenses.length} despesa(s)`);
+    console.log(`  - ${documents.length} documento(s) de notas`);
+    console.log(`  - ${dailyGoals.length} meta(s) diaria(s)`);
     console.log(`  - ${tokens.length} token(s) de reset`);
 
   } catch (error) {

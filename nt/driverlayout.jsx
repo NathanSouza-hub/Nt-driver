@@ -4,6 +4,7 @@ import { getCurrentMonthKey, getMonthLabel, getMonthOptions } from "./driver-dat
 import { apiFetch } from "./http";
 import { isPessoalProfile } from "./profile-type";
 import AuthScreen from "./AuthScreen";
+import SubscriptionGate from "./Subscription";
 import DriverSidebar from "./DriverSidebar";
 
 export default function DriverLayout() {
@@ -64,16 +65,29 @@ export default function DriverLayout() {
   }, []);
 
   const refreshSession = useCallback(async () => {
+    let nextUser = null;
     try {
       const payload = await apiFetch("/api/auth/me");
-      setUser(payload?.user || null);
-      await refreshRecords();
+      nextUser = payload?.user || null;
+      setUser(nextUser);
     } catch (error) {
       setUser(null);
       setRecords([]);
-    } finally {
       setAuthChecked(true);
+      return;
     }
+
+    if (nextUser?.subscriptionActive) {
+      try {
+        await refreshRecords();
+      } catch (error) {
+        setRecords([]);
+      }
+    } else {
+      setRecords([]);
+    }
+
+    setAuthChecked(true);
   }, [refreshRecords]);
 
   useEffect(() => {
@@ -150,6 +164,10 @@ export default function DriverLayout() {
 
   if (!user) {
     return <AuthScreen canRegister={canRegister} onLogin={handleLogin} onRegister={handleRegister} />;
+  }
+
+  if (!user.isAdmin && !user.subscriptionActive) {
+    return <SubscriptionGate user={user} onLogout={handleLogout} onRefresh={refreshSession} />;
   }
 
   if (isPessoalProfile(user.profileType) && location.pathname === "/driver") {

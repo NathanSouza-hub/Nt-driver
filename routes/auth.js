@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const db = require('../models/db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { isSubscriptionActive } = require('../utils/subscription');
+const { buildPixPayload, buildPixQrDataUrl } = require('../utils/pix');
 
 const router = express.Router();
 
@@ -11,6 +13,14 @@ const RESET_TOKEN_MINUTES = 30;
 const EMAIL_VERIFICATION_TOKEN_MINUTES = Number(process.env.EMAIL_VERIFICATION_TOKEN_MINUTES || 60 * 24);
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 const PUBLIC_REGISTER_ENABLED = String(process.env.PUBLIC_REGISTER_ENABLED || 'true') === 'true';
+const SUBSCRIPTION_TRIAL_DAYS = Number(process.env.SUBSCRIPTION_TRIAL_DAYS || 7);
+const SUBSCRIPTION_PRICE = Number(process.env.SUBSCRIPTION_PRICE || 14.99);
+const SUBSCRIPTION_LABEL = process.env.SUBSCRIPTION_LABEL || 'Acesso vitalicio NT Driver';
+const PIX_KEY = process.env.PIX_KEY || '';
+const PIX_KEY_OWNER = process.env.PIX_KEY_OWNER || '';
+const PIX_KEY_CITY = process.env.PIX_KEY_CITY || '';
+
+const getTrialEndsAt = () => new Date(Date.now() + (SUBSCRIPTION_TRIAL_DAYS * 24 * 60 * 60 * 1000));
 const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = String(process.env.SMTP_SECURE || 'false') === 'true';
@@ -79,7 +89,9 @@ const getUsersCount = async () => {
 };
 
 const getUserById = async (id) => db.get(
-  'SELECT id, name, email, is_admin, profile_type, last_login_at, email_verified_at, email_verification_required FROM users WHERE id = $1',
+  `SELECT id, name, email, is_admin, profile_type, last_login_at, email_verified_at, email_verification_required,
+    subscription_status, subscription_trial_ends_at
+   FROM users WHERE id = $1`,
   [id]
 );
 
@@ -101,7 +113,10 @@ const serializeUser = (user) => ({
   email: user.email,
   isAdmin: Boolean(user.is_admin),
   profileType: serializeProfileType(user.profile_type),
-  emailVerified: Boolean(user.email_verified_at) || !Boolean(user.email_verification_required)
+  emailVerified: Boolean(user.email_verified_at) || !Boolean(user.email_verification_required),
+  subscriptionStatus: user.subscription_status || 'trial',
+  subscriptionActive: isSubscriptionActive(user),
+  subscriptionTrialEndsAt: user.subscription_trial_ends_at || null
 });
 
 const sendResetEmail = async (email, link) => {
@@ -204,12 +219,15 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(rawPassword, 10);
     const user = await db.withTransaction(async (client) => {
       const now = new Date();
+      const trialEndsAt = shouldBeAdmin ? null : getTrialEndsAt();
+      const subscriptionStatus = shouldBeAdmin ? 'active' : 'trial';
       const result = await client.query(
         `INSERT INTO users (
-          name, email, password_hash, is_admin, profile_type, email_verified_at, email_verification_required
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          name, email, password_hash, is_admin, profile_type, email_verified_at, email_verification_required,
+          subscription_status, subscription_trial_ends_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id`,
-        [normalizedName, normalizedEmail, passwordHash, shouldBeAdmin, normalizedProfileType, now, false]
+        [normalizedName, normalizedEmail, passwordHash, shouldBeAdmin, normalizedProfileType, now, false, subscriptionStatus, trialEndsAt]
       );
 
       return {
@@ -247,7 +265,9 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await db.get(
-      'SELECT id, name, email, password_hash, is_admin, profile_type, email_verified_at, email_verification_required FROM users WHERE email = $1',
+      `SELECT id, name, email, password_hash, is_admin, profile_type, email_verified_at, email_verification_required,
+        subscription_status, subscription_trial_ends_at
+       FROM users WHERE email = $1`,
       [normalizedEmail]
     );
 
@@ -504,11 +524,14 @@ router.post('/reset-password', async (req, res) => {
 router.get('/users', requireAdmin, async (req, res) => {
   try {
     const rows = await db.all(
-      'SELECT id, name, email, is_admin, profile_type, created_at, last_login_at FROM users ORDER BY id ASC'
+      `SELECT id, name, email, is_admin, profile_type, created_at, last_login_at,
+        subscription_status, subscription_trial_ends_at, subscription_activated_at
+       FROM users ORDER BY id ASC`
     );
     return res.json((rows || []).map((row) => ({
       ...row,
-      profile_type: serializeProfileType(row.profile_type)
+      profile_type: serializeProfileType(row.profile_type),
+      subscription_active: isSubscriptionActive(row)
     })));
   } catch (error) {
     return res.status(500).json({ error: 'Falha ao carregar usuários.' });
@@ -533,11 +556,14 @@ router.post('/users', requireAdmin, async (req, res) => {
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
+    const trialEndsAt = isAdmin ? null : getTrialEndsAt();
+    const subscriptionStatus = isAdmin ? 'active' : 'trial';
     const result = await db.query(
       `INSERT INTO users (
-        name, email, password_hash, is_admin, profile_type, email_verified_at, email_verification_required
-      ) VALUES ($1, $2, $3, $4, $5, NOW(), $6) RETURNING id`,
-      [name, email, passwordHash, isAdmin, normalizedProfileType, false]
+        name, email, password_hash, is_admin, profile_type, email_verified_at, email_verification_required,
+        subscription_status, subscription_trial_ends_at
+      ) VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, $8) RETURNING id`,
+      [name, email, passwordHash, isAdmin, normalizedProfileType, false, subscriptionStatus, trialEndsAt]
     );
     return res.status(201).json({ id: result.rows[0]?.id || null });
   } catch (error) {
@@ -613,6 +639,72 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
       return res.status(error.statusCode).json({ error: error.message });
     }
     return res.status(500).json({ error: 'Falha ao excluir usuário.' });
+  }
+});
+
+router.post('/users/:id/activate-subscription', requireAdmin, async (req, res) => {
+  const userId = Number(req.params.id);
+
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return res.status(400).json({ error: 'Usuário inválido.' });
+  }
+
+  try {
+    const result = await db.query(
+      "UPDATE users SET subscription_status = 'active', subscription_activated_at = NOW() WHERE id = $1",
+      [userId]
+    );
+
+    if ((result.rowCount || 0) <= 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: 'Falha ao liberar acesso.' });
+  }
+});
+
+router.get('/subscription/pix-info', requireAuth, async (req, res) => {
+  if (!PIX_KEY || !PIX_KEY_OWNER || !PIX_KEY_CITY) {
+    return res.status(500).json({ error: 'Cobrança via PIX não configurada.' });
+  }
+
+  try {
+    const payload = buildPixPayload({
+      key: PIX_KEY,
+      amount: SUBSCRIPTION_PRICE,
+      merchantName: PIX_KEY_OWNER,
+      merchantCity: PIX_KEY_CITY,
+      txid: `NTDRIVER${req.session.userId}`
+    });
+    const qrDataUrl = await buildPixQrDataUrl(payload);
+
+    return res.json({
+      pixKey: PIX_KEY,
+      recipientName: PIX_KEY_OWNER,
+      recipientCity: PIX_KEY_CITY,
+      amount: SUBSCRIPTION_PRICE,
+      label: SUBSCRIPTION_LABEL,
+      copyPasteCode: payload,
+      qrDataUrl
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Falha ao gerar cobrança PIX.' });
+  }
+});
+
+router.post('/subscription/notify-payment', requireAuth, async (req, res) => {
+  try {
+    await db.query(
+      "UPDATE users SET subscription_status = 'pending_review' WHERE id = $1 AND subscription_status != 'active'",
+      [req.session.userId]
+    );
+
+    const user = await getUserById(req.session.userId);
+    return res.json({ user: serializeUser(user) });
+  } catch (error) {
+    return res.status(500).json({ error: 'Falha ao registrar aviso de pagamento.' });
   }
 });
 
