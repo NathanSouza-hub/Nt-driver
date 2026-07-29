@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { apiFetch } from "./http";
 import { aggregateRecordsByDate, currency, filterRecordsByMonth, formatDate, getCurrentMonthKey, getMonthLabel, getMonthOptions, getMonthlyGoalForMonth, getMonthlyStatus, normalizeMonthlyStatusMap, setMonthlyGoalForMonth, summarizeRecords } from "./driver-data";
-import { getProfileTypeLabel } from "./profile-type";
+import { getProfileTypeLabel, isPessoalProfile } from "./profile-type";
 
 const fieldStyle = {
   width: "100%",
@@ -1292,6 +1292,13 @@ export function ExpensesPage() {
     category: "",
     status: "pendente",
   });
+  const isMotorista = !isPessoalProfile(user?.profileType);
+  const [activeTab, setActiveTab] = useState("list");
+  const expensesTabs = [
+    { key: "list", label: "Lista" },
+    { key: "kanban", label: "Kanban" },
+    { key: "summary", label: "Resumo" },
+  ];
   const filteredExpenses = useMemo(() => filterPersonalExpensesByMonth(personalExpenses, month), [personalExpenses, month]);
   const expenseRows = useMemo(
     () => filteredExpenses
@@ -1299,6 +1306,50 @@ export function ExpensesPage() {
       .map((item) => ({ ...item, month_status: getPersonalExpenseStatusForMonth(item, month) })),
     [filteredExpenses, month]
   );
+  const expenseTotal = useMemo(() => expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenseRows]);
+  const paidTotal = useMemo(
+    () => expenseRows.filter((item) => item.month_status === "pago").reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    [expenseRows]
+  );
+  const pendingTotal = useMemo(
+    () => expenseRows.filter((item) => item.month_status !== "pago").reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    [expenseRows]
+  );
+  const categoryItems = useMemo(() => {
+    const grouped = expenseRows.reduce((accumulator, item) => {
+      const key = item.category || "Outros";
+      accumulator[key] = (accumulator[key] || 0) + Number(item.amount || 0);
+      return accumulator;
+    }, {});
+    return Object.entries(grouped).sort((left, right) => right[1] - left[1]);
+  }, [expenseRows]);
+  const topCategory = categoryItems[0] || null;
+  const summaryCards = [
+    { key: "total", label: "Total do mês", value: currency(expenseTotal), tone: "card-blue" },
+    { key: "paid", label: "Pagas", value: currency(paidTotal), tone: "card-green" },
+    { key: "pending", label: "Pendentes", value: currency(pendingTotal), tone: "card-red" },
+    { key: "category", label: "Maior categoria", value: topCategory ? `${getPersonalExpenseCategoryLabel(topCategory[0])} - ${currency(topCategory[1])}` : "Sem dados", tone: "card-orange" },
+  ];
+  const chartSegments = useMemo(() => {
+    if (!categoryItems.length || expenseTotal <= 0) return [];
+
+    let currentPercent = 0;
+    return categoryItems.map(([label, value], index) => {
+      const percent = Number(((value / expenseTotal) * 100).toFixed(2));
+      const start = currentPercent;
+      currentPercent += percent;
+      return {
+        label,
+        value,
+        color: expensesChartColors[index % expensesChartColors.length],
+        start,
+        end: currentPercent,
+      };
+    });
+  }, [categoryItems, expenseTotal]);
+  const donutBackground = chartSegments.length
+    ? `conic-gradient(${chartSegments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ")})`
+    : "conic-gradient(#1d2740 0 100%)";
 
   const showToast = (text, tone = "success") => {
     setToast({ text, tone });
@@ -1433,6 +1484,7 @@ export function ExpensesPage() {
       category: item.category || "Outros",
       status: getPersonalExpenseStatusForMonth(item, month),
     });
+    if (isMotorista) setActiveTab("list");
   };
 
   const handleDeleteExpense = async (entryKey) => {
@@ -1493,7 +1545,98 @@ export function ExpensesPage() {
       </div>
       <PageHeader title="Despesas" centered />
 
+      {isMotorista ? <PageTabs tabs={expensesTabs} activeTab={activeTab} onChange={setActiveTab} /> : null}
+
+      {isMotorista && activeTab === "kanban" ? (
+        <div className="expenses-tab-content">
+          <ExpenseKanban
+            rows={expenseRows}
+            month={month}
+            onToggleStatus={handleToggleStatus}
+            onEdit={handleEditExpense}
+            isSaving={isSaving}
+          />
+        </div>
+      ) : null}
+
+      {isMotorista && activeTab === "summary" ? (
+        <div className="expenses-tab-content">
+          <div className="card">
+            <h2>Despesas por categoria</h2>
+            <div className="admin-users-table-wrap">
+              <table className="personal-table">
+                <thead>
+                  <tr>
+                    <th>Categoria</th>
+                    <th>Total</th>
+                    <th>Participação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categoryItems.length ? (
+                    categoryItems.map(([label, total]) => (
+                      <tr key={label}>
+                        <td>{getPersonalExpenseCategoryLabel(label)}</td>
+                        <td>{currency(total)}</td>
+                        <td>{expenseTotal > 0 ? `${((total / expenseTotal) * 100).toFixed(1)}%` : "0.0%"}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="3" style={{ textAlign: "center" }}>
+                        Nenhuma despesa encontrada.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2>Gráfico</h2>
+            {categoryItems.length ? (
+              <div className="expenses-donut-layout">
+                <div className="expenses-donut-card">
+                  <div className="expenses-donut-chart" style={{ background: donutBackground }}>
+                    <div className="expenses-donut-center">
+                      <strong>{currency(expenseTotal)}</strong>
+                      <span>Total</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="expenses-donut-legend">
+                  {chartSegments.map((segment) => (
+                    <div key={segment.label} className="expenses-donut-legend-item">
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span className="expenses-donut-dot" style={{ background: segment.color }} />
+                        <strong>{getPersonalExpenseCategoryLabel(segment.label)}</strong>
+                      </div>
+                      <span>{currency(segment.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: "var(--muted)" }}>Nenhuma despesa encontrada para exibir o resumo.</p>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {!isMotorista || activeTab === "list" ? (
       <div className="expenses-tab-content">
+        {isMotorista ? (
+          <section className="summary-grid dashboard-summary-cards expenses-summary-grid" aria-label="Resumo financeiro">
+            {summaryCards.map((card) => (
+              <div key={card.key} className={`card ${card.tone}`} style={dashboardSummaryCardStyles[card.tone]}>
+                <span style={{ color: "rgba(255,255,255,0.82)" }}>{card.label}</span>
+                <strong>{card.value}</strong>
+              </div>
+            ))}
+          </section>
+        ) : null}
         <div className="card">
           <h2>Lista de despesas</h2>
           <form onSubmit={handleExpenseSubmit} className="admin-users-table-wrap">
@@ -1669,6 +1812,7 @@ export function ExpensesPage() {
           </form>
         </div>
       </div>
+      ) : null}
 
       {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando despesas...</p> : null}
     </>
