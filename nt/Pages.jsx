@@ -9,7 +9,8 @@ const fieldStyle = {
   border: "1px solid rgba(148, 163, 184, 0.3)",
   borderRadius: 12,
   padding: "11px 12px",
-  background: "#ffffff",
+  background: "var(--panel)",
+  color: "var(--text)",
 };
 
 const gridStyle = {
@@ -727,11 +728,11 @@ export function RegisterPage() {
         <div
           style={{
             padding: "22px 24px",
-            background: "linear-gradient(135deg, #eff6ff 0%, #f8fafc 58%, #f0fdf4 100%)",
+            background: "linear-gradient(135deg, #182238 0%, #161e30 58%, #142719 100%)",
             borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
           }}
         >
-          <strong style={{ display: "block", fontSize: "1.1rem", color: "#0f172a", marginBottom: 6 }}>
+          <strong style={{ display: "block", fontSize: "1.1rem", color: "var(--text)", marginBottom: 6 }}>
             {editState ? `Editar lançamentos de ${formatDate(editState.date)}` : "Novo registro do motorista"}
           </strong>
         </div>
@@ -748,7 +749,7 @@ export function RegisterPage() {
               style={{
                 padding: 18,
                 borderRadius: 18,
-                background: "#f8fafc",
+                background: "var(--panel-soft)",
                 border: "1px solid rgba(148, 163, 184, 0.14)",
               }}
             >
@@ -767,11 +768,11 @@ export function RegisterPage() {
               style={{
                 padding: 18,
                 borderRadius: 18,
-                background: "linear-gradient(135deg, rgba(22,163,74,0.08) 0%, rgba(255,255,255,0.98) 100%)",
+                background: "linear-gradient(135deg, rgba(34, 197, 94, 0.16) 0%, rgba(20, 27, 43, 0.92) 100%)",
                 border: "1px solid rgba(34, 197, 94, 0.18)",
               }}
             >
-              <strong style={{ display: "block", marginBottom: 10, color: "#166534", fontSize: "0.98rem" }}>Receita</strong>
+              <strong style={{ display: "block", marginBottom: 10, color: "#4ade80", fontSize: "0.98rem" }}>Receita</strong>
               <div style={{ display: "grid", gap: 12 }}>
                 {registerIncomeSources.map((source) => (
                   <div key={source.key}>
@@ -794,11 +795,11 @@ export function RegisterPage() {
               style={{
                 padding: 18,
                 borderRadius: 18,
-                background: "linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(255,255,255,0.98) 100%)",
+                background: "linear-gradient(135deg, rgba(239, 68, 68, 0.16) 0%, rgba(20, 27, 43, 0.92) 100%)",
                 border: "1px solid rgba(248, 113, 113, 0.18)",
               }}
             >
-              <strong style={{ display: "block", marginBottom: 10, color: "#991b1b", fontSize: "0.98rem" }}>Despesa</strong>
+              <strong style={{ display: "block", marginBottom: 10, color: "#f87171", fontSize: "0.98rem" }}>Despesa</strong>
               <div style={{ display: "grid", gap: 12 }}>
                 {registerExpenseTypes.map((expenseType) => (
                   <div key={expenseType.key}>
@@ -1215,7 +1216,7 @@ export function SummaryPage() {
           Salvar meta
         </button>
         {goalMessage ? (
-          <p style={{ margin: "10px 0 0", color: goalMessage.includes("salva") ? "#15803d" : "#b91c1c", fontWeight: 700 }}>
+          <p style={{ margin: "10px 0 0", color: goalMessage.includes("salva") ? "#4ade80" : "#f87171", fontWeight: 700 }}>
             {goalMessage}
           </p>
         ) : null}
@@ -1223,7 +1224,7 @@ export function SummaryPage() {
       <div className="card">
         <h2>Meta diária</h2>
         {dailyGoalsError ? (
-          <p style={{ marginTop: 0, color: "#b91c1c", fontWeight: 700 }}>
+          <p style={{ marginTop: 0, color: "#f87171", fontWeight: 700 }}>
             {dailyGoalsError}
           </p>
         ) : null}
@@ -1734,13 +1735,13 @@ export function PersonalResumoPage() {
   }, [items, expenseTotal]);
   const donutBackground = chartSegments.length
     ? `conic-gradient(${chartSegments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ")})`
-    : "conic-gradient(#e2e8f0 0 100%)";
+    : "conic-gradient(#1d2740 0 100%)";
 
   return (
     <>
       <PageHeader title="Resumo" centered />
 
-      {loadError ? <p className="auth-message" style={{ color: "#b91c1c" }}>{loadError}</p> : null}
+      {loadError ? <p className="auth-message" style={{ color: "#f87171" }}>{loadError}</p> : null}
 
       <div className="card">
         <h2>Despesas por categoria</h2>
@@ -1962,13 +1963,13 @@ export function PersonalReceitasPage() {
       </div>
       <PageHeader title="Receitas" centered />
 
-      <div className="card" style={{ background: "linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%)", border: "1px solid rgba(34,197,94,0.18)" }}>
+      <div className="card" style={{ background: "linear-gradient(135deg, rgba(34, 197, 94, 0.16) 0%, rgba(20, 27, 43, 0.92) 100%)", border: "1px solid rgba(34,197,94,0.18)" }}>
         <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span aria-hidden="true">✨</span> {editingKey ? "Editar receita" : "Nova fonte de receita"}
         </h2>
         <form onSubmit={handleSubmit} style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div style={{ flex: "1 1 220px" }}>
-            <label style={{ fontWeight: 600, color: "#0f172a", display: "block", marginBottom: 4 }}>Fonte da receita</label>
+            <label style={{ fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Fonte da receita</label>
             <input
               style={fieldStyle}
               value={form.description}
@@ -1978,7 +1979,7 @@ export function PersonalReceitasPage() {
             />
           </div>
           <div style={{ flex: "1 1 140px" }}>
-            <label style={{ fontWeight: 600, color: "#0f172a", display: "block", marginBottom: 4 }}>Valor</label>
+            <label style={{ fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Valor</label>
             <input
               type="number"
               step="0.01"
@@ -1991,7 +1992,7 @@ export function PersonalReceitasPage() {
             />
           </div>
           <div style={{ flex: "1 1 160px" }}>
-            <label style={{ fontWeight: 600, color: "#0f172a", display: "block", marginBottom: 4 }}>Dia de recebimento</label>
+            <label style={{ fontWeight: 600, color: "var(--text)", display: "block", marginBottom: 4 }}>Dia de recebimento</label>
             <input
               type="date"
               style={fieldStyle}
@@ -2189,7 +2190,7 @@ export function PersonalDashboardPage() {
         ))}
       </section>
 
-      {loadError ? <p className="auth-message" style={{ color: "#b91c1c" }}>{loadError}</p> : null}
+      {loadError ? <p className="auth-message" style={{ color: "#f87171" }}>{loadError}</p> : null}
       {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando resumo...</p> : null}
 
       {!isLoading ? (
@@ -2475,7 +2476,7 @@ export function NotesPage() {
           </button>
           <span
             className="admin-notes-message"
-            style={{ color: ["Arquivo salvo.", "Arquivo criado.", "Arquivo aberto.", "Arquivo carregado.", "Arquivo apagado."].includes(message) ? "var(--success, #166534)" : undefined }}
+            style={{ color: ["Arquivo salvo.", "Arquivo criado.", "Arquivo aberto.", "Arquivo carregado.", "Arquivo apagado."].includes(message) ? "var(--success, #4ade80)" : undefined }}
           >
             {message}
           </span>

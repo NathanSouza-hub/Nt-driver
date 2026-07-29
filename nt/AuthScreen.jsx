@@ -37,7 +37,7 @@ function AuthBrandLogo() {
       <img
         src="/nt-driver-logo.svg"
         alt="Nt driver logo"
-        style={{ width: 180, height: 180, boxShadow: '0 8px 32px rgba(34,197,94,0.10), 0 2px 8px rgba(59,130,246,0.10)', borderRadius: 32, background: '#fff' }}
+        style={{ width: 180, height: 180, boxShadow: '0 8px 32px rgba(34,197,94,0.10), 0 2px 8px rgba(59,130,246,0.10)', borderRadius: 32, background: 'var(--panel)' }}
       />
     </div>
   );
@@ -246,7 +246,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
   };
 
   return (
-    <div className="auth-gate" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
+    <div className="auth-gate" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div
         className={`app-toast auth-toast${toast.text ? " visible" : ""}${toast.tone === "error" ? " error" : ""}`}
         role={toast.tone === "error" ? "alert" : "status"}
@@ -258,15 +258,15 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
         <div className="auth-brand-panel" style={{ marginBottom: 18 }}>
           <AuthBrandLogo />
           <div className="auth-brand-copy" style={{ marginTop: 8 }}>
-            <strong className="brand auth-panel-brand" style={{ fontSize: 32, color: '#2563eb', letterSpacing: '-1px' }}>NT Driver</strong>
-            <p className="auth-panel-subtitle" style={{ color: '#3e5472', fontSize: 18, margin: 0 }}>Controle financeiro</p>
+            <strong className="brand auth-panel-brand" style={{ fontSize: 32, color: 'var(--primary)', letterSpacing: '-1px' }}>NT Driver</strong>
+            <p className="auth-panel-subtitle" style={{ color: 'var(--muted)', fontSize: 18, margin: 0 }}>Controle financeiro</p>
           </div>
         </div>
 
         <div className="auth-form-panel" style={{ marginTop: 18 }}>
           {mode === "login" ? (
             <form className="auth-login-form" onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <label htmlFor="login-email" style={{ fontWeight: 600, color: '#0f172a' }}>Email</label>
+              <label htmlFor="login-email" style={{ fontWeight: 600, color: 'var(--text)' }}>Email</label>
               <input
                 id="login-email"
                 type="email"
@@ -275,9 +275,9 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                 value={loginForm.email}
                 onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
                 required
-                style={{ padding: '12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 16, marginBottom: 4 }}
+                style={{ padding: '12px', borderRadius: 8, border: '1px solid rgba(148, 163, 184, 0.35)', fontSize: 16, marginBottom: 4 }}
               />
-              <label htmlFor="login-password" style={{ fontWeight: 600, color: '#0f172a' }}>Senha</label>
+              <label htmlFor="login-password" style={{ fontWeight: 600, color: 'var(--text)' }}>Senha</label>
               <div className="auth-password-field">
                 <input
                   id="login-password"
@@ -287,7 +287,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                   value={loginForm.password}
                   onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
                   required
-                  style={{ padding: '12px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 16, marginBottom: 4 }}
+                  style={{ padding: '12px', borderRadius: 8, border: '1px solid rgba(148, 163, 184, 0.35)', fontSize: 16, marginBottom: 4 }}
                 />
                 <button
                   type="button"
@@ -303,7 +303,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                 <button
                   type="button"
                   className="auth-link-button"
-                  style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', padding: 0, fontSize: 15 }}
+                  style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0, fontSize: 15 }}
                   onClick={() => {
                     setForgotPasswordEmail(loginForm.email);
                     setMode("forgot");
@@ -326,7 +326,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                   className="auth-link-button"
                   onClick={handleResendVerification}
                   disabled={isResendingVerification}
-                  style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", padding: 0, fontSize: 15, textAlign: "left" }}
+                  style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", padding: 0, fontSize: 15, textAlign: "left" }}
                 >
                   {isResendingVerification ? "Reenviando verificação..." : `Reenviar verificação para ${pendingVerificationEmail}`}
                 </button>
@@ -334,8 +334,8 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
             </form>
           ) : mode === "forgot" ? (
             <form className="auth-login-form" onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <strong className="auth-form-title" style={{ fontSize: 22, color: '#2563eb', marginBottom: 8 }}>Recuperar senha</strong>
-              <label htmlFor="forgot-password-email" style={{ fontWeight: 600, color: '#0f172a' }}>Email</label>
+              <strong className="auth-form-title" style={{ fontSize: 22, color: '#60a5fa', marginBottom: 8 }}>Recuperar senha</strong>
+              <label htmlFor="forgot-password-email" style={{ fontWeight: 600, color: 'var(--text)' }}>Email</label>
               <input
                 id="forgot-password-email"
                 type="email"
@@ -356,10 +356,10 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
             </form>
           ) : mode === "reset" ? (
             <form className="auth-register-form" onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <strong className="auth-form-title" style={{ fontSize: 22, color: '#2563eb', marginBottom: 8 }}>Redefinir senha</strong>
-              <label htmlFor="reset-password-email" style={{ fontWeight: 600, color: '#0f172a' }}>Email</label>
+              <strong className="auth-form-title" style={{ fontSize: 22, color: '#60a5fa', marginBottom: 8 }}>Redefinir senha</strong>
+              <label htmlFor="reset-password-email" style={{ fontWeight: 600, color: 'var(--text)' }}>Email</label>
               <input id="reset-password-email" type="email" value={resetForm.email} disabled />
-              <label htmlFor="reset-password-new" style={{ fontWeight: 600, color: '#0f172a' }}>Nova senha</label>
+              <label htmlFor="reset-password-new" style={{ fontWeight: 600, color: 'var(--text)' }}>Nova senha</label>
               <div className="auth-password-field">
                 <input
                   id="reset-password-new"
@@ -380,7 +380,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                   {isResetPasswordVisible ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                 </button>
               </div>
-              <p style={{ margin: "-8px 0 0", color: passwordValidationMessage ? "#475569" : "#475569", fontSize: 13 }}>
+              <p style={{ margin: "-8px 0 0", color: passwordValidationMessage ? "var(--muted)" : "var(--muted)", fontSize: 13 }}>
                 {PASSWORD_HINT}
               </p>
               <div className="auth-main-actions" style={{ display: 'flex', gap: 12, marginTop: 8 }}>
@@ -394,7 +394,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
             </form>
           ) : canRegister ? (
             <form className="auth-register-form" onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <strong className="auth-form-title" style={{ fontSize: 22, color: '#2563eb', marginBottom: 8 }}>Cadastrar</strong>
+              <strong className="auth-form-title" style={{ fontSize: 22, color: '#60a5fa', marginBottom: 8 }}>Cadastrar</strong>
               <div style={{ display: 'flex', gap: 8 }} role="group" aria-label="Tipo de perfil">
                 <button
                   type="button"
@@ -415,7 +415,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                   Perfil pessoal
                 </button>
               </div>
-              <label htmlFor="register-name" style={{ fontWeight: 600, color: '#0f172a' }}>Nome</label>
+              <label htmlFor="register-name" style={{ fontWeight: 600, color: 'var(--text)' }}>Nome</label>
               <input
                 id="register-name"
                 type="text"
@@ -423,7 +423,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                 onChange={(event) => setRegisterForm((current) => ({ ...current, name: event.target.value }))}
                 required
               />
-              <label htmlFor="register-email" style={{ fontWeight: 600, color: '#0f172a' }}>Email</label>
+              <label htmlFor="register-email" style={{ fontWeight: 600, color: 'var(--text)' }}>Email</label>
               <input
                 id="register-email"
                 type="email"
@@ -431,7 +431,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                 onChange={(event) => setRegisterForm((current) => ({ ...current, email: event.target.value }))}
                 required
               />
-              <label htmlFor="register-celular" style={{ fontWeight: 600, color: '#0f172a' }}>Celular</label>
+              <label htmlFor="register-celular" style={{ fontWeight: 600, color: 'var(--text)' }}>Celular</label>
               <input
                 id="register-celular"
                 type="tel"
@@ -439,7 +439,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                 onChange={(event) => setRegisterForm((current) => ({ ...current, celular: event.target.value }))}
                 required
               />
-              <label htmlFor="register-password" style={{ fontWeight: 600, color: '#0f172a' }}>Senha</label>
+              <label htmlFor="register-password" style={{ fontWeight: 600, color: 'var(--text)' }}>Senha</label>
               <div className="auth-password-field">
                 <input
                   id="register-password"
@@ -460,7 +460,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                   {isRegisterPasswordVisible ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                 </button>
               </div>
-              <p style={{ margin: "-8px 0 0", color: passwordValidationMessage ? "#b91c1c" : "#475569", fontSize: 13 }}>
+              <p style={{ margin: "-8px 0 0", color: passwordValidationMessage ? "#f87171" : "var(--muted)", fontSize: 13 }}>
                 {passwordValidationMessage || PASSWORD_HINT}
               </p>
               <div className="auth-main-actions" style={{ display: 'flex', gap: 12, marginTop: 8 }}>

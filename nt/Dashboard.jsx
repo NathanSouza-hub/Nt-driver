@@ -354,10 +354,10 @@ export default function Dashboard() {
                   borderRadius: "50%",
                   display: "grid",
                   placeItems: "center",
-                  color: "#0f172a",
+                  color: "var(--text)",
                   fontSize: "2rem",
                   fontWeight: 700,
-                  background: `conic-gradient(#2563eb 0 ${percentual}%, #dbeafe ${percentual}% 100%)`,
+                  background: `conic-gradient(#3b82f6 0 ${percentual}%, #1d2740 ${percentual}% 100%)`,
                 }}
               >
                 <div
@@ -365,7 +365,7 @@ export default function Dashboard() {
                     width: 150,
                     height: 150,
                     borderRadius: "50%",
-                    background: "#ffffff",
+                    background: "var(--panel)",
                     display: "grid",
                     placeItems: "center",
                     boxShadow: "inset 0 0 0 1px rgba(148, 163, 184, 0.18)",

@@ -2,17 +2,17 @@ import React from "react";
 
 export default function CardResumo({ label, value, color = "blue", icon }) {
   const colorMap = {
-    green: "#16a34a",
-    red: "#dc2626",
-    blue: "#2563eb",
+    green: "#22c55e",
+    red: "#ef4444",
+    blue: "#3b82f6",
   };
   return (
     <div
       className="card-resumo"
       style={{
-        background: "#fff",
+        background: "var(--panel)",
         borderRadius: 18,
-        boxShadow: "0 2px 8px rgba(16,24,42,0.06)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.28)",
         padding: 18,
         minWidth: 120,
         minHeight: 70,

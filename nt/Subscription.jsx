@@ -62,34 +62,34 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
   };
 
   return (
-    <div className="auth-gate" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", padding: 16 }}>
+    <div className="auth-gate" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div className="auth-card" style={{ maxWidth: 440 }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
-          <strong style={{ fontSize: 26, color: "#2563eb", letterSpacing: "-1px" }}>NT Driver</strong>
-          <p style={{ color: "#3e5472", fontSize: 16, margin: "8px 0 0" }}>
+          <strong style={{ fontSize: 26, color: "var(--primary)", letterSpacing: "-1px" }}>NT Driver</strong>
+          <p style={{ color: "var(--muted)", fontSize: 16, margin: "8px 0 0" }}>
             {isTrialExpired ? "Seu período de teste acabou" : "Libere o acesso vitalício"}
           </p>
         </div>
 
         {!isTrialExpired && user?.subscriptionStatus === "trial" ? (
-          <p style={{ background: "#eff6ff", color: "#1d4ed8", borderRadius: 10, padding: "10px 14px", fontSize: 14, textAlign: "center" }}>
+          <p style={{ background: "rgba(37, 99, 235, 0.14)", color: "#60a5fa", borderRadius: 10, padding: "10px 14px", fontSize: 14, textAlign: "center" }}>
             Você ainda tem {daysLeft} dia{daysLeft === 1 ? "" : "s"} de teste grátis. Pode pagar a qualquer momento para não perder o acesso depois.
           </p>
         ) : null}
 
         {notified ? (
-          <div style={{ background: "#f0fdf4", color: "#166534", borderRadius: 10, padding: "14px", fontSize: 14, textAlign: "center", marginTop: 12 }}>
+          <div style={{ background: "rgba(22, 163, 74, 0.16)", color: "#4ade80", borderRadius: 10, padding: "14px", fontSize: 14, textAlign: "center", marginTop: 12 }}>
             Recebemos seu aviso de pagamento. Assim que confirmarmos, seu acesso é liberado automaticamente.
           </div>
         ) : null}
 
         {loadError ? (
-          <p style={{ color: "#b91c1c", fontSize: 14, textAlign: "center", marginTop: 12 }}>{loadError}</p>
+          <p style={{ color: "#f87171", fontSize: 14, textAlign: "center", marginTop: 12 }}>{loadError}</p>
         ) : null}
 
         {pixInfo ? (
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
-            <p style={{ margin: 0, fontSize: 15, color: "#0f172a", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 15, color: "var(--text)", textAlign: "center" }}>
               {pixInfo.label} — pagamento único de <strong>{formatCurrency(pixInfo.amount)}</strong>
             </p>
 
@@ -97,17 +97,17 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
               <img
                 src={pixInfo.qrDataUrl}
                 alt="QR Code PIX"
-                style={{ width: "100%", maxWidth: 220, height: "auto", borderRadius: 12, border: "1px solid #d1d5db" }}
+                style={{ width: "100%", maxWidth: 220, height: "auto", borderRadius: 12, border: "1px solid rgba(148, 163, 184, 0.35)", background: "var(--panel)" }}
               />
             ) : null}
 
             <div style={{ width: "100%" }}>
-              <label style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>Pix copia e cola</label>
+              <label style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>Pix copia e cola</label>
               <textarea
                 readOnly
                 value={pixInfo.copyPasteCode}
                 onFocus={(event) => event.target.select()}
-                style={{ width: "100%", minHeight: 70, marginTop: 4, padding: 10, borderRadius: 8, border: "1px solid #d1d5db", fontSize: 12, fontFamily: "monospace", resize: "none" }}
+                style={{ width: "100%", minHeight: 70, marginTop: 4, padding: 10, borderRadius: 8, border: "1px solid rgba(148, 163, 184, 0.35)", background: "var(--panel)", color: "var(--text)", fontSize: 12, fontFamily: "monospace", resize: "none" }}
               />
             </div>
 
@@ -115,7 +115,7 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
               {copied ? "Código copiado!" : "Copiar código Pix"}
             </button>
 
-            <p style={{ margin: 0, fontSize: 13, color: "#64748b", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--muted)", textAlign: "center" }}>
               Recebedor: {pixInfo.recipientName} • {pixInfo.recipientCity}
             </p>
 
@@ -130,14 +130,14 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
             </button>
           </div>
         ) : !loadError ? (
-          <p style={{ textAlign: "center", color: "#64748b", marginTop: 20 }}>Carregando dados de pagamento...</p>
+          <p style={{ textAlign: "center", color: "var(--muted)", marginTop: 20 }}>Carregando dados de pagamento...</p>
         ) : null}
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <button
             type="button"
             className="auth-link-button"
-            style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", padding: 0, fontSize: 14 }}
+            style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", padding: 0, fontSize: 14 }}
             onClick={onLogout}
           >
             Sair

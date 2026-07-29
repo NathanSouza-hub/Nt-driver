@@ -5,7 +5,7 @@ export default function ProgressBar({ percent }) {
     <div style={{ width: "100%", margin: "16px 0" }}>
       <div
         style={{
-          background: "#e5e7eb",
+          background: "var(--panel-soft)",
           borderRadius: 12,
           height: 16,
           width: "100%",

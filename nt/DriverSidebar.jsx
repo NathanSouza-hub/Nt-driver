@@ -12,7 +12,7 @@ function SidebarBrandLogo({ homePath, homeLabel }) {
       <img
         src="/nt-driver-logo.svg"
         alt="Nt driver logo"
-        style={{ width: 30, height: 30, borderRadius: 7, background: "#fff" }}
+        style={{ width: 30, height: 30, borderRadius: 7, background: "var(--panel)" }}
       />
       <span style={{ fontWeight: 800, fontSize: 23, color: "#fff", letterSpacing: "-0.2px", fontFamily: "Inter, Arial, sans-serif" }}>Nt driver</span>
     </NavLink>
