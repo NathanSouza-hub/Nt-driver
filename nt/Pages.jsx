@@ -1875,7 +1875,6 @@ export function PersonalReceitasPage() {
     () => personalEntries.filter((item) => item.type === "entrada" && String(item.date || "").slice(0, 7) === month),
     [personalEntries, month]
   );
-  const totalReceitas = useMemo(() => receitas.reduce((sum, item) => sum + Number(item.amount || 0), 0), [receitas]);
 
   const updateField = (name, value) => setForm((current) => ({ ...current, [name]: value }));
   const resetForm = () => {
@@ -1962,21 +1961,6 @@ export function PersonalReceitasPage() {
         {toast.text}
       </div>
       <PageHeader title="Receitas" centered />
-
-      <section className="summary-grid dashboard-summary-cards" aria-label="Resumo de receitas">
-        <div className="card" style={dashboardSummaryCardStyles["card-green"]}>
-          <span style={{ color: "rgba(255,255,255,0.82)" }}>Total do mês</span>
-          <strong>{currency(totalReceitas)}</strong>
-        </div>
-        <div className="card" style={dashboardSummaryCardStyles["card-blue"]}>
-          <span style={{ color: "rgba(255,255,255,0.82)" }}>Fontes ativas</span>
-          <strong>{receitas.length}</strong>
-        </div>
-        <div className="card" style={dashboardSummaryCardStyles["card-blue"]}>
-          <span style={{ color: "rgba(255,255,255,0.82)" }}>Média por fonte</span>
-          <strong>{currency(receitas.length ? totalReceitas / receitas.length : 0)}</strong>
-        </div>
-      </section>
 
       <div className="card" style={{ background: "linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%)", border: "1px solid rgba(34,197,94,0.18)" }}>
         <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2070,6 +2054,32 @@ export function PersonalReceitasPage() {
           <p style={{ margin: 0 }}>Nenhuma receita registrada neste mês. Adicione a primeira fonte acima. 👆</p>
         </div>
       )}
+
+      <div className="card">
+        <h2>Últimas receitas</h2>
+        {receitas.length ? (
+          <table className="personal-table">
+            <thead>
+              <tr>
+                <th>Fonte</th>
+                <th>Valor</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {receitas.slice(0, 5).map((item) => (
+                <tr key={item.entry_key}>
+                  <td>{item.description}</td>
+                  <td>{currency(item.amount)}</td>
+                  <td>{formatDate(item.date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p>Nenhuma receita registrada neste mês.</p>
+        )}
+      </div>
 
       {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando receitas...</p> : null}
     </>
