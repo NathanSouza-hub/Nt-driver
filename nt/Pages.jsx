@@ -2058,24 +2058,26 @@ export function PersonalReceitasPage() {
       <div className="card">
         <h2>Últimas receitas</h2>
         {receitas.length ? (
-          <table className="personal-table">
-            <thead>
-              <tr>
-                <th>Fonte</th>
-                <th>Valor</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {receitas.slice(0, 5).map((item) => (
-                <tr key={item.entry_key}>
-                  <td>{item.description}</td>
-                  <td>{currency(item.amount)}</td>
-                  <td>{formatDate(item.date)}</td>
+          <div className="admin-users-table-wrap">
+            <table className="personal-table">
+              <thead>
+                <tr>
+                  <th>Fonte</th>
+                  <th>Valor</th>
+                  <th>Data</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {receitas.slice(0, 5).map((item) => (
+                  <tr key={item.entry_key}>
+                    <td>{item.description}</td>
+                    <td>{currency(item.amount)}</td>
+                    <td>{formatDate(item.date)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p>Nenhuma receita registrada neste mês.</p>
         )}

@@ -63,7 +63,7 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
 
   return (
     <div className="auth-gate" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", padding: 16 }}>
-      <div className="auth-card" style={{ boxShadow: "0 8px 32px rgba(34,197,94,0.10), 0 2px 8px rgba(59,130,246,0.10)", borderRadius: 32, padding: 40, maxWidth: 440, width: "100%" }}>
+      <div className="auth-card" style={{ maxWidth: 440 }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           <strong style={{ fontSize: 26, color: "#2563eb", letterSpacing: "-1px" }}>NT Driver</strong>
           <p style={{ color: "#3e5472", fontSize: 16, margin: "8px 0 0" }}>
@@ -97,7 +97,7 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
               <img
                 src={pixInfo.qrDataUrl}
                 alt="QR Code PIX"
-                style={{ width: 220, height: 220, borderRadius: 12, border: "1px solid #d1d5db" }}
+                style={{ width: "100%", maxWidth: 220, height: "auto", borderRadius: 12, border: "1px solid #d1d5db" }}
               />
             ) : null}
 
