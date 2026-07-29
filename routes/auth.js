@@ -39,7 +39,10 @@ const mailTransport = hasSmtpConfig
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS
-    }
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000
   })
   : null;
 

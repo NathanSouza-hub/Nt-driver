@@ -138,10 +138,10 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
       const payload = await onRegister(registerForm);
       if (payload?.requiresEmailVerification) {
         setPendingVerificationEmail(payload.email || registerForm.email);
-        setLoginForm((current) => ({ ...current, email: payload.email || registerForm.email }));
-        setRegisterForm((current) => ({ ...current, password: "" }));
-        setMode("login");
       }
+      setLoginForm((current) => ({ ...current, email: payload?.email || registerForm.email }));
+      setRegisterForm((current) => ({ ...current, password: "" }));
+      setMode("login");
       showToast(payload?.message || "Cadastro enviado.");
     } catch (error) {
       showToast(error.message, "error");
