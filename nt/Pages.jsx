@@ -1813,7 +1813,7 @@ const receitaCardPalette = [
   { background: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)", icon: "💼" },
   { background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)", icon: "🏥" },
   { background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)", icon: "💻" },
-  { background: "linear-gradient(135deg, #d97706 0%, #f59e0b 100%)", icon: "🛠️" },
+  { background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)", icon: "🛠️" },
   { background: "linear-gradient(135deg, #db2777 0%, #ec4899 100%)", icon: "🎁" },
   { background: "linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)", icon: "💰" },
 ];
@@ -1972,7 +1972,7 @@ export function PersonalReceitasPage() {
           <span style={{ color: "rgba(255,255,255,0.82)" }}>Fontes ativas</span>
           <strong>{receitas.length}</strong>
         </div>
-        <div className="card" style={dashboardSummaryCardStyles["card-orange"]}>
+        <div className="card" style={dashboardSummaryCardStyles["card-blue"]}>
           <span style={{ color: "rgba(255,255,255,0.82)" }}>Média por fonte</span>
           <strong>{currency(receitas.length ? totalReceitas / receitas.length : 0)}</strong>
         </div>
@@ -2182,32 +2182,6 @@ export function PersonalDashboardPage() {
 
       {!isLoading ? (
         <>
-          <div className="card">
-            <h2>Últimas receitas</h2>
-            {receitas.length ? (
-              <table className="personal-table">
-                <thead>
-                  <tr>
-                    <th>Fonte</th>
-                    <th>Valor</th>
-                    <th>Data</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {receitas.slice(0, 5).map((item) => (
-                    <tr key={item.entry_key}>
-                      <td>{item.description}</td>
-                      <td>{currency(item.amount)}</td>
-                      <td>{formatDate(item.date)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>Nenhuma receita registrada neste mês.</p>
-            )}
-          </div>
-
           <div className="expenses-tab-content">
             <h2 style={{ margin: "0 0 12px" }}>Despesas</h2>
             <ExpenseKanban
