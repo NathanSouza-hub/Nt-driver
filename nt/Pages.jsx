@@ -89,7 +89,7 @@ function normalizePersonalExpenseItem(item = {}) {
     entry_key: String(item.entry_key || item.entryKey || createPersonalExpenseKey()),
     description: String(item.description || "").trim(),
     amount: Number(item.amount) || 0,
-    type: "saida",
+    type: item.type === "entrada" ? "entrada" : "saida",
     category: String(item.category || "Outros").trim() || "Outros",
     account: String(item.account || "outros"),
     status: item.status === "pago" ? "pago" : "pendente",
@@ -1802,6 +1802,241 @@ export function ExpensesPage() {
       ) : null}
 
       {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando despesas pessoais...</p> : null}
+    </>
+  );
+}
+
+export function PersonalReceitasPage() {
+  const { expensesMonth } = useOutletContext();
+  const month = expensesMonth || getCurrentMonthKey();
+  const [personalEntries, setPersonalEntries] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingKey, setEditingKey] = useState("");
+  const [toast, setToast] = useState({ text: "", tone: "success" });
+  const [form, setForm] = useState({
+    description: "",
+    amount: "",
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  const showToast = (text, tone = "success") => setToast({ text, tone });
+
+  useEffect(() => {
+    if (!toast.text) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setToast((current) => (current.text === toast.text ? { text: "", tone: "success" } : current));
+    }, 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPersonalEntries = async () => {
+      try {
+        setIsLoading(true);
+        const payload = await apiFetch("/api/personal-expenses");
+        if (!isMounted) return;
+        setPersonalEntries(Array.isArray(payload) ? payload.map(normalizePersonalExpenseItem) : []);
+      } catch (error) {
+        if (isMounted) showToast(error.message, "error");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    loadPersonalEntries();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const receitas = useMemo(
+    () => personalEntries.filter((item) => item.type === "entrada" && String(item.date || "").slice(0, 7) === month),
+    [personalEntries, month]
+  );
+  const totalReceitas = useMemo(() => receitas.reduce((sum, item) => sum + Number(item.amount || 0), 0), [receitas]);
+
+  const updateField = (name, value) => setForm((current) => ({ ...current, [name]: value }));
+  const resetForm = () => {
+    setEditingKey("");
+    setForm({ description: "", amount: "", date: new Date().toISOString().slice(0, 10) });
+  };
+
+  const persistEntries = async (itemsToSave) => {
+    const payload = await apiFetch("/api/personal-expenses/replace", {
+      method: "POST",
+      body: JSON.stringify({ items: itemsToSave }),
+    });
+    const normalized = Array.isArray(payload?.items) ? payload.items.map(normalizePersonalExpenseItem) : [];
+    setPersonalEntries(normalized);
+    return normalized;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setToast({ text: "", tone: "success" });
+    setIsSaving(true);
+    try {
+      const amount = Number(String(form.amount).replace(",", "."));
+      if (!form.description.trim()) throw new Error("Informe a fonte da receita.");
+      if (!amount || amount <= 0) throw new Error("Informe um valor válido.");
+      if (!form.date) throw new Error("Informe a data.");
+
+      const entry = normalizePersonalExpenseItem({
+        entry_key: editingKey || createPersonalExpenseKey(),
+        description: form.description.trim(),
+        amount,
+        type: "entrada",
+        category: "Receita",
+        account: "pessoal",
+        status: "pago",
+        date: form.date,
+        due_day: Number(form.date.slice(8, 10)) || 1,
+      });
+
+      const nextItems = editingKey
+        ? personalEntries.map((item) => (item.entry_key === editingKey ? entry : item))
+        : [entry, ...personalEntries];
+
+      await persistEntries(nextItems);
+      resetForm();
+      showToast(editingKey ? "Receita atualizada." : "Receita adicionada.");
+    } catch (error) {
+      showToast(error.message, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEdit = (item) => {
+    setEditingKey(item.entry_key);
+    setForm({
+      description: item.description || "",
+      amount: String(item.amount || ""),
+      date: String(item.date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    });
+  };
+
+  const handleDelete = async (entryKey) => {
+    try {
+      setToast({ text: "", tone: "success" });
+      setIsSaving(true);
+      await persistEntries(personalEntries.filter((item) => item.entry_key !== entryKey));
+      if (editingKey === entryKey) resetForm();
+      showToast("Receita removida.");
+    } catch (error) {
+      showToast(error.message, "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div
+        className={`app-toast${toast.text ? " visible" : ""}${toast.tone === "error" ? " error" : ""}`}
+        role={toast.tone === "error" ? "alert" : "status"}
+        aria-live="polite"
+      >
+        {toast.text}
+      </div>
+      <PageHeader title="Receitas" centered />
+
+      <section className="summary-grid dashboard-summary-cards" aria-label="Resumo de receitas">
+        <div className="card card-green" style={dashboardSummaryCardStyles["card-green"]}>
+          <span style={{ color: "rgba(255,255,255,0.82)" }}>Total do mês</span>
+          <strong>{currency(totalReceitas)}</strong>
+        </div>
+      </section>
+
+      <div className="card">
+        <h2>Fontes de receita</h2>
+        <form onSubmit={handleSubmit} className="admin-users-table-wrap">
+          <table className="personal-table">
+            <thead>
+              <tr>
+                <th>Fonte da receita</th>
+                <th>Valor</th>
+                <th>Dia de recebimento</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <input
+                    style={fieldStyle}
+                    value={form.description}
+                    onChange={(event) => updateField("description", event.target.value)}
+                    placeholder="Ex.: Salário, Plantão, Freelance"
+                    required
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    step="0.01"
+                    style={fieldStyle}
+                    value={form.amount}
+                    onChange={(event) => updateField("amount", event.target.value)}
+                    placeholder="0,00"
+                    min="0.01"
+                    required
+                  />
+                </td>
+                <td>
+                  <input
+                    type="date"
+                    style={fieldStyle}
+                    value={form.date}
+                    onChange={(event) => updateField("date", event.target.value)}
+                    required
+                  />
+                </td>
+                <td>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="submit" className="auth-submit" disabled={isSaving}>
+                      {isSaving ? "Salvando..." : editingKey ? "Salvar" : "Adicionar"}
+                    </button>
+                    {editingKey ? (
+                      <button type="button" className="auth-outline-button" onClick={resetForm}>
+                        Cancelar
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
+              </tr>
+              {receitas.length ? (
+                receitas.map((item) => (
+                  <tr key={item.entry_key}>
+                    <td>{item.description}</td>
+                    <td>{currency(item.amount)}</td>
+                    <td>{formatDate(item.date)}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button type="button" className="auth-outline-button" onClick={() => handleEdit(item)}>
+                          Editar
+                        </button>
+                        <button type="button" className="logout-btn" onClick={() => handleDelete(item.entry_key)}>
+                          Excluir
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center" }}>
+                    Nenhuma receita registrada neste mês.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </form>
+      </div>
+
+      {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando receitas...</p> : null}
     </>
   );
 }

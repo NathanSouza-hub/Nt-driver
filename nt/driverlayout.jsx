@@ -1,10 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getCurrentMonthKey, getMonthLabel, getMonthOptions } from "./driver-data";
 import { apiFetch } from "./http";
+import { isPessoalProfile } from "./profile-type";
 import AuthScreen from "./AuthScreen";
 import SubscriptionGate from "./Subscription";
 import DriverSidebar from "./DriverSidebar";
+
+const PERSONAL_ALLOWED_PATHS = new Set(["/driver/receitas", "/driver/expenses", "/driver/profile"]);
+const PERSONAL_HOME_PATH = "/driver/receitas";
 
 export default function DriverLayout() {
   const navigate = useNavigate();
@@ -29,6 +33,7 @@ export default function DriverLayout() {
   const isPerformancePage = location.pathname === "/driver/performance";
   const isSummaryPage = location.pathname === "/driver/summary";
   const isExpensesPage = location.pathname === "/driver/expenses";
+  const isReceitasPage = location.pathname === "/driver/receitas";
   const topbarMonthOptions = useMemo(() => getMonthOptions(records), [records]);
 
   const userInitial = useMemo(() => {
@@ -156,6 +161,14 @@ export default function DriverLayout() {
     return <SubscriptionGate user={user} onLogout={handleLogout} onRefresh={refreshSession} />;
   }
 
+  if (isPessoalProfile(user.profileType) && location.pathname === "/driver") {
+    return <Navigate to={PERSONAL_HOME_PATH} replace />;
+  }
+
+  if (isPessoalProfile(user.profileType) && !PERSONAL_ALLOWED_PATHS.has(location.pathname)) {
+    return <Navigate to={PERSONAL_HOME_PATH} replace />;
+  }
+
   return (
     <div className={`app-shell ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
       <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
@@ -171,7 +184,7 @@ export default function DriverLayout() {
             >
               ☰
             </button>
-            {isDashboardPage || isHistoryPage || isPerformancePage || isSummaryPage || isExpensesPage ? (
+            {isDashboardPage || isHistoryPage || isPerformancePage || isSummaryPage || isExpensesPage || isReceitasPage ? (
               <select
                 className="app-topbar-month-select"
                 aria-label={
@@ -183,7 +196,9 @@ export default function DriverLayout() {
                         ? "Selecionar mês do desempenho"
                         : isSummaryPage
                           ? "Selecionar mês das metas"
-                          : "Selecionar mês das despesas pessoais"
+                          : isReceitasPage
+                            ? "Selecionar mês das receitas"
+                            : "Selecionar mês das despesas pessoais"
                 }
                 value={
                   isDashboardPage

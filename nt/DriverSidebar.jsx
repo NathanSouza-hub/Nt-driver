@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { getProfileTypeLabel } from "./profile-type";
+import { getProfileTypeLabel, isPessoalProfile } from "./profile-type";
 
 function SidebarBrandLogo({ homePath, homeLabel }) {
   return (
@@ -73,6 +73,13 @@ const icons = {
       <path d="M7 15h4" />
     </SidebarIcon>
   ),
+  income: (
+    <SidebarIcon>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v8" />
+      <path d="M9 11l3-3 3 3" />
+    </SidebarIcon>
+  ),
   notes: (
     <SidebarIcon>
       <path d="M4 4h16v16H4z" />
@@ -106,6 +113,11 @@ const driverPrimaryItems = [
   { to: "/driver/expenses", label: "Despesas pessoais", icon: icons.expenses },
 ];
 
+const personalPrimaryItems = [
+  { to: "/driver/receitas", label: "Receitas", icon: icons.income, end: true },
+  { to: "/driver/expenses", label: "Despesas pessoais", icon: icons.expenses },
+];
+
 export default function DriverSidebar({ user }) {
   const adminItems = user?.isAdmin
     ? [
@@ -114,7 +126,8 @@ export default function DriverSidebar({ user }) {
       ]
     : [];
 
-  const navItems = [...driverPrimaryItems, ...adminItems];
+  const primaryItems = isPessoalProfile(user?.profileType) ? personalPrimaryItems : driverPrimaryItems;
+  const navItems = [...primaryItems, ...adminItems];
 
   return (
     <aside className="sidebar">

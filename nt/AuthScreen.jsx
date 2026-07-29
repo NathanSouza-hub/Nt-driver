@@ -395,6 +395,26 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
           ) : canRegister ? (
             <form className="auth-register-form" onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <strong className="auth-form-title" style={{ fontSize: 22, color: '#2563eb', marginBottom: 8 }}>Cadastrar</strong>
+              <div style={{ display: 'flex', gap: 8 }} role="group" aria-label="Tipo de perfil">
+                <button
+                  type="button"
+                  className={registerForm.profileType === "driver" ? "auth-submit" : "auth-outline-button"}
+                  style={{ flex: 1 }}
+                  aria-pressed={registerForm.profileType === "driver"}
+                  onClick={() => setRegisterForm((current) => ({ ...current, profileType: "driver" }))}
+                >
+                  Motorista
+                </button>
+                <button
+                  type="button"
+                  className={registerForm.profileType === "pessoal" ? "auth-submit" : "auth-outline-button"}
+                  style={{ flex: 1 }}
+                  aria-pressed={registerForm.profileType === "pessoal"}
+                  onClick={() => setRegisterForm((current) => ({ ...current, profileType: "pessoal" }))}
+                >
+                  Perfil pessoal
+                </button>
+              </div>
               <label htmlFor="register-name" style={{ fontWeight: 600, color: '#0f172a' }}>Nome</label>
               <input
                 id="register-name"

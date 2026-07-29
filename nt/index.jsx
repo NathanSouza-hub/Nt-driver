@@ -8,6 +8,7 @@ import {
   HistoryPage,
   NotesPage,
   PerformancePage,
+  PersonalReceitasPage,
   ProfilePage,
   RegisterPage,
   SummaryPage,
@@ -28,6 +29,7 @@ root.render(
           <Route path="performance" element={<PerformancePage />} />
           <Route path="summary" element={<SummaryPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
+          <Route path="receitas" element={<PersonalReceitasPage />} />
           <Route path="notes" element={<NotesPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="profile" element={<ProfilePage />} />
