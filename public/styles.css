@@ -3337,30 +3337,6 @@ select {
   }
 }
 
-@media (max-width: 1000px) {
-  .register-kanban-shell form > div:first-child {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width: 640px) {
-  .register-kanban-shell form {
-    padding: 16px !important;
-  }
-
-  .register-kanban-shell form > div:nth-child(2) {
-    grid-template-columns: 1fr !important;
-  }
-
-  .register-kanban-shell form > div:last-child {
-    align-items: stretch !important;
-  }
-
-  .register-kanban-shell form > div:last-child button {
-    width: 100%;
-  }
-}
-
 .register-card h3 {
   margin: 0;
   font-size: 1rem;
@@ -3459,6 +3435,30 @@ select {
 
 .register-kanban-shell form > div:last-child {
   padding-top: 6px !important;
+}
+
+@media (max-width: 1000px) {
+  .register-kanban-shell form > div:first-child {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .register-kanban-shell form {
+    padding: 16px !important;
+  }
+
+  .register-kanban-shell form > div:nth-child(2) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .register-kanban-shell form > div:last-child {
+    align-items: stretch !important;
+  }
+
+  .register-kanban-shell form > div:last-child button {
+    width: 100%;
+  }
 }
 
 .register-personal-card {
