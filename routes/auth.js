@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
 const db = require('../models/db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { isSubscriptionActive } = require('../utils/subscription');
@@ -21,30 +20,37 @@ const PIX_KEY_OWNER = process.env.PIX_KEY_OWNER || '';
 const PIX_KEY_CITY = process.env.PIX_KEY_CITY || '';
 
 const getTrialEndsAt = () => new Date(Date.now() + (SUBSCRIPTION_TRIAL_DAYS * 24 * 60 * 60 * 1000));
-const SMTP_HOST = process.env.SMTP_HOST || '';
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_SECURE = String(process.env.SMTP_SECURE || 'false') === 'true';
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
-const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || 'no-reply@ntdriver.local';
+const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || '';
+const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'NT Driver';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 const PASSWORD_MIN_LENGTH = 8;
 
-const hasSmtpConfig = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
-const mailTransport = hasSmtpConfig
-  ? nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_SECURE,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS
+const hasBrevoConfig = Boolean(BREVO_API_KEY && BREVO_SENDER_EMAIL);
+
+const sendTransactionalEmail = async ({ to, subject, text, html }) => {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'api-key': BREVO_API_KEY
     },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000
-  })
-  : null;
+    body: JSON.stringify({
+      sender: { email: BREVO_SENDER_EMAIL, name: BREVO_SENDER_NAME },
+      to: [{ email: to }],
+      subject,
+      textContent: text,
+      htmlContent: html
+    }),
+    signal: AbortSignal.timeout(10000)
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Brevo respondeu ${response.status}: ${body}`);
+  }
+};
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 const isValidEmail = (email) => EMAIL_REGEX.test(String(email || ''));
@@ -123,13 +129,12 @@ const serializeUser = (user) => ({
 });
 
 const sendResetEmail = async (email, link) => {
-  if (!mailTransport) {
+  if (!hasBrevoConfig) {
     console.log(`[auth] Link de reset para ${email}: ${link}`);
     return;
   }
 
-  await mailTransport.sendMail({
-    from: SMTP_FROM,
+  await sendTransactionalEmail({
     to: email,
     subject: 'Recuperação de senha - NT Driver',
     text: `Você solicitou recuperação de senha. Use este link: ${link}`,
@@ -138,13 +143,12 @@ const sendResetEmail = async (email, link) => {
 };
 
 const sendVerificationEmail = async (email, link) => {
-  if (!mailTransport) {
+  if (!hasBrevoConfig) {
     console.log(`[auth] Link de verificação para ${email}: ${link}`);
     return;
   }
 
-  await mailTransport.sendMail({
-    from: SMTP_FROM,
+  await sendTransactionalEmail({
     to: email,
     subject: 'Confirme seu email - NT Driver',
     text: `Confirme seu email para liberar o acesso ao NT Driver: ${link}`,

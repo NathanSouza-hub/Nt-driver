@@ -23,15 +23,9 @@ services:
         sync: false
       - key: APP_BASE_URL
         sync: false
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_SECURE
-        value: "false"
-      - key: SMTP_USER
+      - key: BREVO_SENDER_EMAIL
         value: ntdriverapp@gmail.com
-      - key: SMTP_FROM
-        value: ntdriverapp@gmail.com
-      - key: SMTP_PASS
+      - key: BREVO_SENDER_NAME
+        value: NT Driver
+      - key: BREVO_API_KEY
         sync: false
