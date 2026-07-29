@@ -695,11 +695,7 @@ select {
   min-width: 260px;
   border-right: 1px solid #22304a;
   box-shadow: 10px 0 30px rgba(2, 6, 23, 0.22);
-  height: 100vh;
-  align-self: start;
-  position: sticky;
-  top: 0;
-  overflow-y: auto;
+  min-height: 100vh;
   transition: transform 0.24s ease, opacity 0.24s ease;
 }
 
