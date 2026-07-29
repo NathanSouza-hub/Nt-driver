@@ -7,8 +7,8 @@ import AuthScreen from "./AuthScreen";
 import SubscriptionGate from "./Subscription";
 import DriverSidebar from "./DriverSidebar";
 
-const PERSONAL_ALLOWED_PATHS = new Set(["/driver/receitas", "/driver/expenses", "/driver/profile"]);
-const PERSONAL_HOME_PATH = "/driver/receitas";
+const PERSONAL_ALLOWED_PATHS = new Set(["/driver", "/driver/receitas", "/driver/expenses", "/driver/resumo", "/driver/profile"]);
+const PERSONAL_HOME_PATH = "/driver";
 
 export default function DriverLayout() {
   const navigate = useNavigate();
@@ -34,6 +34,8 @@ export default function DriverLayout() {
   const isSummaryPage = location.pathname === "/driver/summary";
   const isExpensesPage = location.pathname === "/driver/expenses";
   const isReceitasPage = location.pathname === "/driver/receitas";
+  const isResumoPage = location.pathname === "/driver/resumo";
+  const isPersonalProfile = isPessoalProfile(user?.profileType);
   const topbarMonthOptions = useMemo(() => getMonthOptions(records), [records]);
 
   const userInitial = useMemo(() => {
@@ -161,10 +163,6 @@ export default function DriverLayout() {
     return <SubscriptionGate user={user} onLogout={handleLogout} onRefresh={refreshSession} />;
   }
 
-  if (isPessoalProfile(user.profileType) && location.pathname === "/driver") {
-    return <Navigate to={PERSONAL_HOME_PATH} replace />;
-  }
-
   if (isPessoalProfile(user.profileType) && !PERSONAL_ALLOWED_PATHS.has(location.pathname)) {
     return <Navigate to={PERSONAL_HOME_PATH} replace />;
   }
@@ -184,11 +182,11 @@ export default function DriverLayout() {
             >
               ☰
             </button>
-            {isDashboardPage || isHistoryPage || isPerformancePage || isSummaryPage || isExpensesPage || isReceitasPage ? (
+            {isDashboardPage || isHistoryPage || isPerformancePage || isSummaryPage || isExpensesPage || isReceitasPage || isResumoPage ? (
               <select
                 className="app-topbar-month-select"
                 aria-label={
-                  isDashboardPage
+                  isDashboardPage && !isPersonalProfile
                     ? "Selecionar mês do dashboard"
                     : isHistoryPage
                       ? "Selecionar mês do histórico"
@@ -198,10 +196,12 @@ export default function DriverLayout() {
                           ? "Selecionar mês das metas"
                           : isReceitasPage
                             ? "Selecionar mês das receitas"
-                            : "Selecionar mês das despesas pessoais"
+                            : isResumoPage
+                              ? "Selecionar mês do resumo"
+                              : "Selecionar mês das despesas"
                 }
                 value={
-                  isDashboardPage
+                  isDashboardPage && !isPersonalProfile
                     ? dashboardMonth
                     : isHistoryPage
                       ? historyMonth
@@ -213,7 +213,7 @@ export default function DriverLayout() {
                 }
                 onChange={(event) => {
                   const nextMonth = event.target.value || getCurrentMonthKey();
-                  if (isDashboardPage) setDashboardMonth(nextMonth);
+                  if (isDashboardPage && !isPersonalProfile) setDashboardMonth(nextMonth);
                   else if (isHistoryPage) setHistoryMonth(nextMonth);
                   else if (isPerformancePage) setPerformanceMonth(nextMonth);
                   else if (isSummaryPage) setSummaryMonth(nextMonth);

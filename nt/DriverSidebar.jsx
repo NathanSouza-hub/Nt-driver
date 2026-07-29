@@ -110,12 +110,14 @@ const driverPrimaryItems = [
   { to: "/driver/history", label: "Histórico", icon: icons.history },
   { to: "/driver/performance", label: "Desempenho", icon: icons.performance },
   { to: "/driver/summary", label: "Metas", icon: icons.goals },
-  { to: "/driver/expenses", label: "Despesas pessoais", icon: icons.expenses },
+  { to: "/driver/expenses", label: "Despesas", icon: icons.expenses },
 ];
 
 const personalPrimaryItems = [
-  { to: "/driver/receitas", label: "Receitas", icon: icons.income, end: true },
-  { to: "/driver/expenses", label: "Despesas pessoais", icon: icons.expenses },
+  { to: "/driver", label: "Dashboard", icon: icons.dashboard, end: true },
+  { to: "/driver/receitas", label: "Receitas", icon: icons.income },
+  { to: "/driver/expenses", label: "Despesas", icon: icons.expenses },
+  { to: "/driver/resumo", label: "Resumo", icon: icons.performance },
 ];
 
 export default function DriverSidebar({ user }) {

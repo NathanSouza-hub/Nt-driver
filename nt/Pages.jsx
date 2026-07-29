@@ -1274,12 +1274,13 @@ export function SummaryPage() {
 
 export function ExpensesPage() {
   const { user, expensesMonth } = useOutletContext();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [personalExpenses, setPersonalExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState({ text: "", tone: "success" });
   const month = expensesMonth || getCurrentMonthKey();
-  const [activeTab, setActiveTab] = useState("kanban");
   const [editingKey, setEditingKey] = useState("");
   const [form, setForm] = useState({
     description: "",
@@ -1297,56 +1298,6 @@ export function ExpensesPage() {
       .map((item) => ({ ...item, month_status: getPersonalExpenseStatusForMonth(item, month) })),
     [filteredExpenses, month]
   );
-  const expenseTotal = useMemo(() => expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenseRows]);
-  const paidTotal = useMemo(
-    () => expenseRows.filter((item) => item.month_status === "pago").reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    [expenseRows]
-  );
-  const pendingTotal = useMemo(
-    () => expenseRows.filter((item) => item.month_status !== "pago").reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    [expenseRows]
-  );
-  const items = useMemo(() => {
-    const grouped = expenseRows.reduce((accumulator, item) => {
-      const key = item.category || "Outros";
-      accumulator[key] = (accumulator[key] || 0) + Number(item.amount || 0);
-      return accumulator;
-    }, {});
-    return Object.entries(grouped).sort((left, right) => right[1] - left[1]);
-  }, [expenseRows]);
-  const topCategory = items[0] || null;
-  const chartColors = ["#2563eb", "#16a34a", "#d97706", "#dc2626", "#7c3aed", "#0891b2", "#0f766e"];
-  const chartSegments = useMemo(() => {
-    if (!items.length || expenseTotal <= 0) return [];
-
-    let currentPercent = 0;
-    return items.map(([label, value], index) => {
-      const percent = Number(((value / expenseTotal) * 100).toFixed(2));
-      const start = currentPercent;
-      currentPercent += percent;
-      return {
-        label,
-        value,
-        color: chartColors[index % chartColors.length],
-        start,
-        end: currentPercent,
-      };
-    });
-  }, [items, expenseTotal]);
-  const donutBackground = chartSegments.length
-    ? `conic-gradient(${chartSegments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ")})`
-    : "conic-gradient(#e2e8f0 0 100%)";
-  const tabs = [
-    { key: "kanban", label: "Kanban" },
-    { key: "list", label: "Lista" },
-    { key: "summary", label: "Resumo" },
-  ];
-  const summaryCards = [
-    { key: "total", label: "Total do mês", value: currency(expenseTotal), tone: "card-blue" },
-    { key: "paid", label: "Pagas", value: currency(paidTotal), tone: "card-green" },
-    { key: "pending", label: "Pendentes", value: currency(pendingTotal), tone: "card-red" },
-    { key: "category", label: "Maior categoria", value: topCategory ? `${getPersonalExpenseCategoryLabel(topCategory[0])} - ${currency(topCategory[1])}` : "Sem dados", tone: "card-orange" },
-  ];
 
   const showToast = (text, tone = "success") => {
     setToast({ text, tone });
@@ -1440,10 +1391,10 @@ export function ExpensesPage() {
       const installmentsValue = String(form.installments || "").trim();
 
       if (!normalized.description) {
-        throw new Error("Informe a descrição da despesa pessoal.");
+        throw new Error("Informe a descrição da despesa.");
       }
       if (normalized.amount <= 0) {
-        throw new Error("Informe um valor válido para a despesa pessoal.");
+        throw new Error("Informe um valor válido para a despesa.");
       }
       if (installmentsValue && !parseInstallments(installmentsValue)) {
         throw new Error("Informe as parcelas no formato atual/total. Ex.: 3/9.");
@@ -1462,7 +1413,7 @@ export function ExpensesPage() {
 
       await persistExpenses(nextItems);
       resetExpenseForm();
-      showToast(editingKey ? "Despesa pessoal atualizada." : "Despesa pessoal adicionada.");
+      showToast(editingKey ? "Despesa atualizada." : "Despesa adicionada.");
     } catch (error) {
       showToast(error.message, "error");
     } finally {
@@ -1481,7 +1432,6 @@ export function ExpensesPage() {
       category: item.category || "Outros",
       status: getPersonalExpenseStatusForMonth(item, month),
     });
-    setActiveTab("list");
   };
 
   const handleDeleteExpense = async (entryKey) => {
@@ -1490,7 +1440,7 @@ export function ExpensesPage() {
       setIsSaving(true);
       await persistExpenses(personalExpenses.filter((item) => item.entry_key !== entryKey));
       if (editingKey === entryKey) resetExpenseForm();
-      showToast("Despesa pessoal removida.");
+      showToast("Despesa removida.");
     } catch (error) {
       showToast(error.message, "error");
     } finally {
@@ -1523,6 +1473,14 @@ export function ExpensesPage() {
     }
   };
 
+  useEffect(() => {
+    const editExpenseKey = location.state?.editExpenseKey;
+    if (!editExpenseKey || isLoading) return;
+    const target = personalExpenses.find((item) => item.entry_key === editExpenseKey);
+    if (target) handleEditExpense(target);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state, isLoading, personalExpenses]);
+
   return (
     <>
       <div
@@ -1532,103 +1490,14 @@ export function ExpensesPage() {
       >
         {toast.text}
       </div>
-      <PageHeader title="Despesas pessoais" centered />
-      <PageTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      <PageHeader title="Despesas" centered />
 
-      {activeTab === "kanban" ? (
-        <div className="expenses-tab-content">
-          <ExpenseKanban
-            rows={expenseRows}
-            month={month}
-            onToggleStatus={handleToggleStatus}
-            onEdit={handleEditExpense}
-            isSaving={isSaving}
-          />
-        </div>
-      ) : null}
-
-      {activeTab === "summary" ? (
-        <div className="expenses-tab-content">
-          <div className="card">
-            <h2>Despesas pessoais por categoria</h2>
-            <div className="admin-users-table-wrap">
-              <table className="personal-table">
-                <thead>
-                  <tr>
-                    <th>Categoria</th>
-                    <th>Total</th>
-                  <th>Participação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length ? (
-                    items.map(([label, total]) => (
-                      <tr key={label}>
-                        <td>{getPersonalExpenseCategoryLabel(label)}</td>
-                        <td>{currency(total)}</td>
-                        <td>{expenseTotal > 0 ? `${((total / expenseTotal) * 100).toFixed(1)}%` : "0.0%"}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="3" style={{ textAlign: "center" }}>
-                        Nenhuma despesa encontrada.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="card">
-            <h2>Resumo</h2>
-            {items.length ? (
-              <div className="expenses-donut-layout">
-                <div className="expenses-donut-card">
-                  <div className="expenses-donut-chart" style={{ background: donutBackground }}>
-                    <div className="expenses-donut-center">
-                      <strong>{currency(expenseTotal)}</strong>
-                      <span>Total</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="expenses-donut-legend">
-                  {chartSegments.map((segment) => (
-                    <div key={segment.label} className="expenses-donut-legend-item">
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span className="expenses-donut-dot" style={{ background: segment.color }} />
-                        <strong>{getPersonalExpenseCategoryLabel(segment.label)}</strong>
-                      </div>
-                      <span>{currency(segment.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p style={{ margin: 0, color: "var(--muted)" }}>Nenhuma despesa encontrada para exibir o resumo.</p>
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === "list" ? (
-        <div className="expenses-tab-content">
-          <section className="summary-grid dashboard-summary-cards expenses-summary-grid" aria-label="Resumo financeiro">
-            {summaryCards.map((card) => (
-              <div key={card.key} className={`card ${card.tone}`} style={dashboardSummaryCardStyles[card.tone]}>
-                <span style={{ color: "rgba(255,255,255,0.82)" }}>{card.label}</span>
-                <strong>{card.value}</strong>
-              </div>
-            ))}
-          </section>
-
-          <div className="card">
-            <h2>Lista de despesas pessoais</h2>
-            <form onSubmit={handleExpenseSubmit} className="admin-users-table-wrap">
-              <table className="personal-table">
-                <thead>
+      <div className="expenses-tab-content">
+        <div className="card">
+          <h2>Lista de despesas</h2>
+          <form onSubmit={handleExpenseSubmit} className="admin-users-table-wrap">
+            <table className="personal-table">
+              <thead>
                   <tr>
                     <th>Descrição</th>
                     <th>Valor</th>
@@ -1795,15 +1664,167 @@ export function ExpensesPage() {
                     </tr>
                   )}
                 </tbody>
-              </table>
-            </form>
-          </div>
+            </table>
+          </form>
         </div>
-      ) : null}
+      </div>
 
-      {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando despesas pessoais...</p> : null}
+      {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando despesas...</p> : null}
     </>
   );
+}
+
+const expensesChartColors = ["#2563eb", "#16a34a", "#d97706", "#dc2626", "#7c3aed", "#0891b2", "#0f766e"];
+
+export function PersonalResumoPage() {
+  const { expensesMonth } = useOutletContext();
+  const month = expensesMonth || getCurrentMonthKey();
+  const [personalExpenses, setPersonalExpenses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPersonalExpenses = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError("");
+        const payload = await apiFetch("/api/personal-expenses");
+        if (!isMounted) return;
+        setPersonalExpenses(Array.isArray(payload) ? payload.map(normalizePersonalExpenseItem) : []);
+      } catch (error) {
+        if (isMounted) setLoadError(error.message);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    loadPersonalExpenses();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredExpenses = useMemo(() => filterPersonalExpensesByMonth(personalExpenses, month), [personalExpenses, month]);
+  const expenseRows = useMemo(() => filteredExpenses.filter((item) => item.type === "saida"), [filteredExpenses]);
+  const expenseTotal = useMemo(() => expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenseRows]);
+  const items = useMemo(() => {
+    const grouped = expenseRows.reduce((accumulator, item) => {
+      const key = item.category || "Outros";
+      accumulator[key] = (accumulator[key] || 0) + Number(item.amount || 0);
+      return accumulator;
+    }, {});
+    return Object.entries(grouped).sort((left, right) => right[1] - left[1]);
+  }, [expenseRows]);
+  const chartSegments = useMemo(() => {
+    if (!items.length || expenseTotal <= 0) return [];
+
+    let currentPercent = 0;
+    return items.map(([label, value], index) => {
+      const percent = Number(((value / expenseTotal) * 100).toFixed(2));
+      const start = currentPercent;
+      currentPercent += percent;
+      return {
+        label,
+        value,
+        color: expensesChartColors[index % expensesChartColors.length],
+        start,
+        end: currentPercent,
+      };
+    });
+  }, [items, expenseTotal]);
+  const donutBackground = chartSegments.length
+    ? `conic-gradient(${chartSegments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ")})`
+    : "conic-gradient(#e2e8f0 0 100%)";
+
+  return (
+    <>
+      <PageHeader title="Resumo" centered />
+
+      {loadError ? <p className="auth-message" style={{ color: "#b91c1c" }}>{loadError}</p> : null}
+
+      <div className="card">
+        <h2>Despesas por categoria</h2>
+        <div className="admin-users-table-wrap">
+          <table className="personal-table">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Total</th>
+                <th>Participação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length ? (
+                items.map(([label, total]) => (
+                  <tr key={label}>
+                    <td>{getPersonalExpenseCategoryLabel(label)}</td>
+                    <td>{currency(total)}</td>
+                    <td>{expenseTotal > 0 ? `${((total / expenseTotal) * 100).toFixed(1)}%` : "0.0%"}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="3" style={{ textAlign: "center" }}>
+                    Nenhuma despesa encontrada.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Gráfico</h2>
+        {items.length ? (
+          <div className="expenses-donut-layout">
+            <div className="expenses-donut-card">
+              <div className="expenses-donut-chart" style={{ background: donutBackground }}>
+                <div className="expenses-donut-center">
+                  <strong>{currency(expenseTotal)}</strong>
+                  <span>Total</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="expenses-donut-legend">
+              {chartSegments.map((segment) => (
+                <div key={segment.label} className="expenses-donut-legend-item">
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span className="expenses-donut-dot" style={{ background: segment.color }} />
+                    <strong>{getPersonalExpenseCategoryLabel(segment.label)}</strong>
+                  </div>
+                  <span>{currency(segment.value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p style={{ margin: 0, color: "var(--muted)" }}>Nenhuma despesa encontrada para exibir o resumo.</p>
+        )}
+      </div>
+
+      {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando resumo...</p> : null}
+    </>
+  );
+}
+
+const receitaCardPalette = [
+  { background: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)", icon: "💼" },
+  { background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)", icon: "🏥" },
+  { background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)", icon: "💻" },
+  { background: "linear-gradient(135deg, #d97706 0%, #f59e0b 100%)", icon: "🛠️" },
+  { background: "linear-gradient(135deg, #db2777 0%, #ec4899 100%)", icon: "🎁" },
+  { background: "linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)", icon: "💰" },
+];
+
+function getReceitaCardStyle(description) {
+  const text = String(description || "").trim();
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 31 + text.charCodeAt(i)) % receitaCardPalette.length;
+  }
+  return receitaCardPalette[Math.abs(hash) % receitaCardPalette.length];
 }
 
 export function PersonalReceitasPage() {
@@ -1943,100 +1964,262 @@ export function PersonalReceitasPage() {
       <PageHeader title="Receitas" centered />
 
       <section className="summary-grid dashboard-summary-cards" aria-label="Resumo de receitas">
-        <div className="card card-green" style={dashboardSummaryCardStyles["card-green"]}>
+        <div className="card" style={dashboardSummaryCardStyles["card-green"]}>
           <span style={{ color: "rgba(255,255,255,0.82)" }}>Total do mês</span>
           <strong>{currency(totalReceitas)}</strong>
         </div>
+        <div className="card" style={dashboardSummaryCardStyles["card-blue"]}>
+          <span style={{ color: "rgba(255,255,255,0.82)" }}>Fontes ativas</span>
+          <strong>{receitas.length}</strong>
+        </div>
+        <div className="card" style={dashboardSummaryCardStyles["card-orange"]}>
+          <span style={{ color: "rgba(255,255,255,0.82)" }}>Média por fonte</span>
+          <strong>{currency(receitas.length ? totalReceitas / receitas.length : 0)}</strong>
+        </div>
       </section>
 
-      <div className="card">
-        <h2>Fontes de receita</h2>
-        <form onSubmit={handleSubmit} className="admin-users-table-wrap">
-          <table className="personal-table">
-            <thead>
-              <tr>
-                <th>Fonte da receita</th>
-                <th>Valor</th>
-                <th>Dia de recebimento</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <input
-                    style={fieldStyle}
-                    value={form.description}
-                    onChange={(event) => updateField("description", event.target.value)}
-                    placeholder="Ex.: Salário, Plantão, Freelance"
-                    required
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    step="0.01"
-                    style={fieldStyle}
-                    value={form.amount}
-                    onChange={(event) => updateField("amount", event.target.value)}
-                    placeholder="0,00"
-                    min="0.01"
-                    required
-                  />
-                </td>
-                <td>
-                  <input
-                    type="date"
-                    style={fieldStyle}
-                    value={form.date}
-                    onChange={(event) => updateField("date", event.target.value)}
-                    required
-                  />
-                </td>
-                <td>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button type="submit" className="auth-submit" disabled={isSaving}>
-                      {isSaving ? "Salvando..." : editingKey ? "Salvar" : "Adicionar"}
-                    </button>
-                    {editingKey ? (
-                      <button type="button" className="auth-outline-button" onClick={resetForm}>
-                        Cancelar
-                      </button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
-              {receitas.length ? (
-                receitas.map((item) => (
-                  <tr key={item.entry_key}>
-                    <td>{item.description}</td>
-                    <td>{currency(item.amount)}</td>
-                    <td>{formatDate(item.date)}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button type="button" className="auth-outline-button" onClick={() => handleEdit(item)}>
-                          Editar
-                        </button>
-                        <button type="button" className="logout-btn" onClick={() => handleDelete(item.entry_key)}>
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="4" style={{ textAlign: "center" }}>
-                    Nenhuma receita registrada neste mês.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      <div className="card" style={{ background: "linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%)", border: "1px solid rgba(34,197,94,0.18)" }}>
+        <h2 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span aria-hidden="true">✨</span> {editingKey ? "Editar receita" : "Nova fonte de receita"}
+        </h2>
+        <form onSubmit={handleSubmit} style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 220px" }}>
+            <label style={{ fontWeight: 600, color: "#0f172a", display: "block", marginBottom: 4 }}>Fonte da receita</label>
+            <input
+              style={fieldStyle}
+              value={form.description}
+              onChange={(event) => updateField("description", event.target.value)}
+              placeholder="Ex.: Salário, Plantão, Freelance"
+              required
+            />
+          </div>
+          <div style={{ flex: "1 1 140px" }}>
+            <label style={{ fontWeight: 600, color: "#0f172a", display: "block", marginBottom: 4 }}>Valor</label>
+            <input
+              type="number"
+              step="0.01"
+              style={fieldStyle}
+              value={form.amount}
+              onChange={(event) => updateField("amount", event.target.value)}
+              placeholder="0,00"
+              min="0.01"
+              required
+            />
+          </div>
+          <div style={{ flex: "1 1 160px" }}>
+            <label style={{ fontWeight: 600, color: "#0f172a", display: "block", marginBottom: 4 }}>Dia de recebimento</label>
+            <input
+              type="date"
+              style={fieldStyle}
+              value={form.date}
+              onChange={(event) => updateField("date", event.target.value)}
+              required
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="submit" className="auth-submit" disabled={isSaving}>
+              {isSaving ? "Salvando..." : editingKey ? "Salvar" : "Adicionar"}
+            </button>
+            {editingKey ? (
+              <button type="button" className="auth-outline-button" onClick={resetForm}>
+                Cancelar
+              </button>
+            ) : null}
+          </div>
         </form>
       </div>
 
+      {receitas.length ? (
+        <div style={gridStyle}>
+          {receitas.map((item) => {
+            const cardStyle = getReceitaCardStyle(item.description);
+            return (
+              <article
+                key={item.entry_key}
+                className="card"
+                style={{ background: cardStyle.background, color: "#ffffff", border: "none", display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 26 }} aria-hidden="true">{cardStyle.icon}</span>
+                  <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 13 }}>{formatDate(item.date)}</span>
+                </div>
+                <strong style={{ fontSize: 20 }}>{item.description}</strong>
+                <strong style={{ fontSize: 24 }}>{currency(item.amount)}</strong>
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(item)}
+                    style={{ flex: 1, background: "rgba(255,255,255,0.2)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.entry_key)}
+                    style={{ flex: 1, background: "rgba(0,0,0,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="card" style={{ textAlign: "center" }}>
+          <p style={{ margin: 0 }}>Nenhuma receita registrada neste mês. Adicione a primeira fonte acima. 👆</p>
+        </div>
+      )}
+
       {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando receitas...</p> : null}
+    </>
+  );
+}
+
+export function PersonalDashboardPage() {
+  const { expensesMonth } = useOutletContext();
+  const navigate = useNavigate();
+  const month = expensesMonth || getCurrentMonthKey();
+  const [personalEntries, setPersonalEntries] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPersonalEntries = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError("");
+        const payload = await apiFetch("/api/personal-expenses");
+        if (!isMounted) return;
+        setPersonalEntries(Array.isArray(payload) ? payload.map(normalizePersonalExpenseItem) : []);
+      } catch (error) {
+        if (isMounted) setLoadError(error.message);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    loadPersonalEntries();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const receitas = useMemo(
+    () => personalEntries.filter((item) => item.type === "entrada" && String(item.date || "").slice(0, 7) === month),
+    [personalEntries, month]
+  );
+  const filteredExpenses = useMemo(() => filterPersonalExpensesByMonth(personalEntries, month), [personalEntries, month]);
+  const expenseRows = useMemo(
+    () => filteredExpenses
+      .filter((item) => item.type === "saida")
+      .map((item) => ({ ...item, month_status: getPersonalExpenseStatusForMonth(item, month) })),
+    [filteredExpenses, month]
+  );
+  const totalReceitas = useMemo(() => receitas.reduce((sum, item) => sum + Number(item.amount || 0), 0), [receitas]);
+  const totalDespesas = useMemo(() => expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenseRows]);
+  const saldo = totalReceitas - totalDespesas;
+
+  const summaryCards = [
+    { key: "receitas", label: "Receitas", value: totalReceitas, tone: "card-green" },
+    { key: "despesas", label: "Despesas", value: totalDespesas, tone: "card-red" },
+    { key: "saldo", label: "Saldo do mês", value: saldo, tone: "card-blue" },
+  ];
+
+  const persistEntries = async (itemsToSave) => {
+    const payload = await apiFetch("/api/personal-expenses/replace", {
+      method: "POST",
+      body: JSON.stringify({ items: itemsToSave }),
+    });
+    const normalized = Array.isArray(payload?.items) ? payload.items.map(normalizePersonalExpenseItem) : [];
+    setPersonalEntries(normalized);
+    return normalized;
+  };
+
+  const handleToggleStatus = async (entryKey) => {
+    try {
+      setIsSaving(true);
+      await persistEntries(
+        personalEntries.map((item) => {
+          if (item.entry_key !== entryKey) return item;
+          const currentStatus = getPersonalExpenseStatusForMonth(item, month);
+          const nextStatus = currentStatus === "pago" ? "pendente" : "pago";
+          const nextStatusMonths = getUpdatedStatusMonths(item, month, nextStatus);
+          return {
+            ...item,
+            status_months: nextStatusMonths,
+            status: getBaseExpenseStatus(item, nextStatusMonths),
+          };
+        })
+      );
+    } catch (error) {
+      setLoadError(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditExpense = (item) => {
+    navigate("/driver/expenses", { state: { editExpenseKey: item.entry_key } });
+  };
+
+  return (
+    <>
+      <PageHeader title="Dashboard" centered />
+
+      <section className="summary-grid dashboard-summary-cards" aria-label="Resumo financeiro">
+        {summaryCards.map((card) => (
+          <div key={card.key} className="card" style={dashboardSummaryCardStyles[card.tone]}>
+            <span style={{ color: "rgba(255,255,255,0.82)" }}>{card.label}</span>
+            <strong>{currency(card.value)}</strong>
+          </div>
+        ))}
+      </section>
+
+      {loadError ? <p className="auth-message" style={{ color: "#b91c1c" }}>{loadError}</p> : null}
+      {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando resumo...</p> : null}
+
+      {!isLoading ? (
+        <>
+          <div className="card">
+            <h2>Últimas receitas</h2>
+            {receitas.length ? (
+              <table className="personal-table">
+                <thead>
+                  <tr>
+                    <th>Fonte</th>
+                    <th>Valor</th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receitas.slice(0, 5).map((item) => (
+                    <tr key={item.entry_key}>
+                      <td>{item.description}</td>
+                      <td>{currency(item.amount)}</td>
+                      <td>{formatDate(item.date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>Nenhuma receita registrada neste mês.</p>
+            )}
+          </div>
+
+          <div className="expenses-tab-content">
+            <h2 style={{ margin: "0 0 12px" }}>Despesas</h2>
+            <ExpenseKanban
+              rows={expenseRows}
+              month={month}
+              onToggleStatus={handleToggleStatus}
+              onEdit={handleEditExpense}
+              isSaving={isSaving}
+            />
+          </div>
+        </>
+      ) : null}
     </>
   );
 }
