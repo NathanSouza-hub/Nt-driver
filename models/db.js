@@ -108,13 +108,27 @@ const compileSqliteStatement = (sql, params = []) => {
   let compiledSql = String(sql || '');
   const compiledParams = [];
 
-  compiledSql = compiledSql.replace(/=\s*ANY\(\$(\d+)::[A-Za-z_][A-Za-z0-9_\[\]]*\)/gi, (_, indexText) => {
-    const index = Number(indexText) - 1;
-    const values = Array.isArray(params[index]) ? params[index] : [];
-    if (!values.length) return 'IN (NULL)';
-    values.forEach((value) => compiledParams.push(normalizeSqliteValue(value)));
-    return `IN (${values.map(() => '?').join(', ')})`;
-  });
+  // Single pass, left-to-right over the SQL text, so params are pushed in the
+  // same order their placeholders actually appear — a plain $1 appearing
+  // before an ANY($2::type[]) must still bind before it. Two separate
+  // .replace() passes (ANY first, then plain $N) would push the ANY values
+  // first regardless of where $1 sits in the text, corrupting the binding
+  // order whenever a lower-numbered placeholder precedes the ANY one.
+  compiledSql = compiledSql.replace(
+    /=\s*ANY\(\$(\d+)::[A-Za-z_][A-Za-z0-9_\[\]]*\)|\$(\d+)/gi,
+    (match, anyIndexText, plainIndexText) => {
+      if (anyIndexText !== undefined) {
+        const index = Number(anyIndexText) - 1;
+        const values = Array.isArray(params[index]) ? params[index] : [];
+        if (!values.length) return 'IN (NULL)';
+        values.forEach((value) => compiledParams.push(normalizeSqliteValue(value)));
+        return `IN (${values.map(() => '?').join(', ')})`;
+      }
+      const index = Number(plainIndexText) - 1;
+      compiledParams.push(normalizeSqliteValue(params[index]));
+      return '?';
+    }
+  );
 
   compiledSql = compiledSql
     .replace(/::[A-Za-z_][A-Za-z0-9_\[\]]*/g, '')
@@ -122,12 +136,6 @@ const compileSqliteStatement = (sql, params = []) => {
     .replace(/\bBTRIM\(/gi, 'TRIM(')
     .replace(/\bCONCAT\(\s*'expense-',\s*id\s*\)/gi, "('expense-' || id)")
     .replace(/SUBSTRING\(\s*([^)]+?)\s+FROM\s+(\d+)\s+FOR\s+(\d+)\s*\)/gi, 'SUBSTR($1, $2, $3)');
-
-  compiledSql = compiledSql.replace(/\$(\d+)/g, (_, indexText) => {
-    const index = Number(indexText) - 1;
-    compiledParams.push(normalizeSqliteValue(params[index]));
-    return '?';
-  });
 
   return {
     sql: compiledSql,
