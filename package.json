@@ -13,7 +13,9 @@
     "migrate:sqlite-to-postgres": "node scripts/migrate-sqlite-to-postgres.js",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.2.1",
@@ -34,6 +36,8 @@
     "vite": "^4.4.9"
   },
   "devDependencies": {
-    "@flydotio/dockerfile": "^0.7.10"
+    "@flydotio/dockerfile": "^0.7.10",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.10"
   }
 }
