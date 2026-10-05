@@ -34,7 +34,7 @@ No seu caso: `C:\Users\natha\Nt driver`
 
 ## Rodar em localhost
 
-O projeto tem um arquivo `.env.local` para voltar ao ambiente local sem depender do Fly.io.
+O projeto tem um arquivo `.env.local` para rodar o ambiente local sem depender do servidor de producao.
 Ele usa SQLite em `database/ntdriver.db` e define `APP_BASE_URL=http://localhost:3000`.
 
 ```bash
@@ -51,7 +51,7 @@ http://localhost:3000
 
 - `SESSION_SECRET`: chave longa e aleatoria
 - `DB_CLIENT`: `sqlite` para banco no mesmo app ou `postgres` para banco externo
-- `SQLITE_FILE`: caminho do arquivo SQLite (ex.: `/data/ntdriver.db` na Fly)
+- `SQLITE_FILE`: caminho do arquivo SQLite (ex.: `database/ntdriver.db` em localhost)
 - `DATABASE_URL`: URL do PostgreSQL/Supabase quando `DB_CLIENT=postgres`
 - `APP_BASE_URL`: URL publica do app (ou localhost em desenvolvimento)
 - `SESSION_TABLE_NAME`: opcional, nome da tabela de sessao no PostgreSQL (padrao: `user_sessions`)
@@ -84,18 +84,18 @@ http://localhost:3000
 - Em `NODE_ENV=production` com `DB_CLIENT=postgres`, o app usa `connect-pg-simple` para salvar sessao no PostgreSQL.
 - Em `DB_CLIENT=sqlite`, a sessao fica no store padrao do processo; reinicios e deploys encerram sessoes ativas.
 
-## Fly.io com tudo no mesmo app
+## Deploy no Render
 
-1. Crie um volume persistente:
-	- `fly volumes create data --region gru --size 1 -a nt-driver`
-2. Configure os secrets:
-	- `DB_CLIENT=sqlite`
-	- `SQLITE_FILE=/data/ntdriver.db`
-	- `NODE_ENV=production`
-	- `APP_BASE_URL=https://nt-driver.fly.dev`
-	- `SESSION_SECRET` forte
-3. Publique:
-	- `fly deploy -a nt-driver`
+O arquivo `render.yaml` descreve o servico (Blueprint). Com o repositorio conectado no Render,
+cada push na branch `main` gera um deploy automatico.
+
+1. No Render: New + Blueprint, escolher este repositorio (le o `render.yaml`)
+2. Preencher as variaveis marcadas como `sync: false`:
+	- `DATABASE_URL` do PostgreSQL/Supabase
+	- `APP_BASE_URL` com a URL publica do Render
+	- `BREVO_API_KEY`
+3. O Render roda `npm ci && npm run build` e depois `npm start`
+4. No plano gratuito o disco nao e persistente: use `DB_CLIENT=postgres` (SQLite perderia os dados)
 
 ## Checklist final de publicacao
 
@@ -115,7 +115,7 @@ http://localhost:3000
 4. Publicar no provedor (sugestao: Render):
 	- New + Web Service
 	- conectar este repositorio
-	- Build Command: `npm install`
+	- Build Command: `npm ci && npm run build`
 	- Start Command: `npm start`
 	- adicionar todas as variaveis de ambiente acima
 	- Health Check Path: `/healthz`
