@@ -4,9 +4,9 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  publicDir: path.resolve(__dirname, 'public'),
+  publicDir: path.resolve(import.meta.dirname, 'public'),
   build: {
-    outDir: path.resolve(__dirname, 'dist'),
+    outDir: path.resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
   },
   server: {
@@ -15,7 +15,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'nt'),
+      '@': path.resolve(import.meta.dirname, 'nt'),
     },
   },
 });
