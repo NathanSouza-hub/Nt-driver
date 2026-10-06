@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { getCurrentMonthKey, getMonthLabel, getMonthOptions } from "./driver-data";
+import { MONTH_NAMES, getCurrentMonthKey, getYearOptions } from "./driver-data";
 import { apiFetch } from "./http";
 import { isPessoalProfile } from "./profile-type";
 import AuthScreen from "./AuthScreen";
@@ -36,7 +36,40 @@ export default function DriverLayout() {
   const isReceitasPage = location.pathname === "/driver/receitas";
   const isResumoPage = location.pathname === "/driver/resumo";
   const isPersonalProfile = isPessoalProfile(user?.profileType);
-  const topbarMonthOptions = useMemo(() => getMonthOptions(records), [records]);
+  const topbarYearOptions = useMemo(() => getYearOptions(records), [records]);
+  const isDashboardMonth = isDashboardPage && !isPersonalProfile;
+  const selectedMonthKey = isDashboardMonth
+    ? dashboardMonth
+    : isHistoryPage
+      ? historyMonth
+      : isPerformancePage
+        ? performanceMonth
+        : isSummaryPage
+          ? summaryMonth
+          : expensesMonth;
+  const [selectedYear, selectedMonth] = String(selectedMonthKey || getCurrentMonthKey()).split("-").map(Number);
+  const topbarPeriodLabel = isDashboardMonth
+    ? "do dashboard"
+    : isHistoryPage
+      ? "do histórico"
+      : isPerformancePage
+        ? "do desempenho"
+        : isSummaryPage
+          ? "das metas"
+          : isReceitasPage
+            ? "das receitas"
+            : isResumoPage
+              ? "do resumo"
+              : "das despesas";
+
+  const setSelectedPeriod = (year, month) => {
+    const nextMonth = `${year}-${String(month).padStart(2, "0")}`;
+    if (isDashboardMonth) setDashboardMonth(nextMonth);
+    else if (isHistoryPage) setHistoryMonth(nextMonth);
+    else if (isPerformancePage) setPerformanceMonth(nextMonth);
+    else if (isSummaryPage) setSummaryMonth(nextMonth);
+    else setExpensesMonth(nextMonth);
+  };
 
   const userInitial = useMemo(() => {
     const initial = String(user?.name || "U").trim().charAt(0);
@@ -183,49 +216,32 @@ export default function DriverLayout() {
               ☰
             </button>
             {isDashboardPage || isHistoryPage || isPerformancePage || isSummaryPage || isExpensesPage || isReceitasPage || isResumoPage ? (
-              <select
-                className="app-topbar-month-select"
-                aria-label={
-                  isDashboardPage && !isPersonalProfile
-                    ? "Selecionar mês do dashboard"
-                    : isHistoryPage
-                      ? "Selecionar mês do histórico"
-                      : isPerformancePage
-                        ? "Selecionar mês do desempenho"
-                        : isSummaryPage
-                          ? "Selecionar mês das metas"
-                          : isReceitasPage
-                            ? "Selecionar mês das receitas"
-                            : isResumoPage
-                              ? "Selecionar mês do resumo"
-                              : "Selecionar mês das despesas"
-                }
-                value={
-                  isDashboardPage && !isPersonalProfile
-                    ? dashboardMonth
-                    : isHistoryPage
-                      ? historyMonth
-                      : isPerformancePage
-                        ? performanceMonth
-                        : isSummaryPage
-                          ? summaryMonth
-                          : expensesMonth
-                }
-                onChange={(event) => {
-                  const nextMonth = event.target.value || getCurrentMonthKey();
-                  if (isDashboardPage && !isPersonalProfile) setDashboardMonth(nextMonth);
-                  else if (isHistoryPage) setHistoryMonth(nextMonth);
-                  else if (isPerformancePage) setPerformanceMonth(nextMonth);
-                  else if (isSummaryPage) setSummaryMonth(nextMonth);
-                  else setExpensesMonth(nextMonth);
-                }}
-              >
-                {topbarMonthOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {getMonthLabel(option)}
-                  </option>
-                ))}
-              </select>
+              <>
+                <select
+                  className="app-topbar-month-select app-topbar-year-select"
+                  aria-label={`Selecionar ano ${topbarPeriodLabel}`}
+                  value={selectedYear}
+                  onChange={(event) => setSelectedPeriod(Number(event.target.value), selectedMonth)}
+                >
+                  {topbarYearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="app-topbar-month-select"
+                  aria-label={`Selecionar mês ${topbarPeriodLabel}`}
+                  value={selectedMonth}
+                  onChange={(event) => setSelectedPeriod(selectedYear, Number(event.target.value))}
+                >
+                  {MONTH_NAMES.map((name, index) => (
+                    <option key={name} value={index + 1}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </>
             ) : null}
           </div>
 

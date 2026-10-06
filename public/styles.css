@@ -904,6 +904,11 @@ select {
   font-weight: 600;
 }
 
+.app-topbar-month-select.app-topbar-year-select {
+  min-width: 96px;
+  max-width: 110px;
+}
+
 .app-topbar-title {
   display: grid;
   line-height: 1.15;

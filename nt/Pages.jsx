@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { apiFetch } from "./http";
-import { aggregateRecordsByDate, currency, filterRecordsByMonth, formatDate, getCurrentMonthKey, getMonthLabel, getMonthOptions, getMonthlyGoalForMonth, getMonthlyStatus, normalizeMonthlyStatusMap, setMonthlyGoalForMonth, summarizeRecords } from "./driver-data";
+import { aggregateRecordsByDate, currency, filterRecordsByMonth, formatDate, getCurrentMonthKey, getMonthLabel, getMonthlyGoalForMonth, getMonthlyStatus, normalizeMonthlyStatusMap, setMonthlyGoalForMonth, summarizeRecords } from "./driver-data";
 import { getProfileTypeLabel, isPessoalProfile } from "./profile-type";
 
 const fieldStyle = {
