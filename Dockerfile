@@ -1,5 +1,6 @@
 # O servico no Render usa o runtime Docker: este arquivo e obrigatorio para o deploy.
-FROM node:24.12.0-slim
+# trixie: o binario do sqlite3 6 exige glibc >= 2.38 (a imagem slim padrao, bookworm, tem 2.36).
+FROM node:24.12.0-trixie-slim
 WORKDIR /app
 
 COPY package.json package-lock.json ./
