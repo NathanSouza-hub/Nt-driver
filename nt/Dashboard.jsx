@@ -396,6 +396,7 @@ export default function Dashboard() {
               { label: "Uber", value: summary.incomeBySource.Uber || 0, tone: "green" },
               { label: "99", value: summary.incomeBySource["99"] || 0, tone: "green" },
               { label: "InDriver", value: summary.incomeBySource.InDriver || 0, tone: "green" },
+              { label: "Outros", value: summary.incomeBySource.Outros || 0, tone: "green" },
               { label: "Km", value: summary.km, tone: "green", formatter: (value) => `${value.toFixed(1)} km` },
               { label: "Horas", value: summary.hours, tone: "green", formatter: (value) => `${value.toFixed(1)} h` },
               { label: "Receita por dia", value: summary.incomePerDay, tone: "green" },

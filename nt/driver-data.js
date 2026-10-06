@@ -235,6 +235,7 @@ export const aggregateRecordsByDate = (records = []) => {
       uberIncome: 0,
       ninetyNineIncome: 0,
       indriverIncome: 0,
+      otherIncome: 0,
       fuelExpense: 0,
       streetFoodExpense: 0,
       oilExpense: 0,
@@ -265,6 +266,7 @@ export const aggregateRecordsByDate = (records = []) => {
     if (incomeSource === "uber") current.uberIncome += record.incomeValue;
     else if (incomeSource === "99") current.ninetyNineIncome += record.incomeValue;
     else if (incomeSource === "indriver") current.indriverIncome += record.incomeValue;
+    else if (record.incomeValue > 0) current.otherIncome += record.incomeValue;
 
     if (expenseType === "combustivel") current.fuelExpense += record.expenseValue;
     else if (expenseType === "alimentacao na rua") current.streetFoodExpense += record.expenseValue;

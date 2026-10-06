@@ -46,6 +46,7 @@ const registerIncomeSources = [
   { key: "uber_income", label: "Uber" },
   { key: "ninety_nine_income", label: "99" },
   { key: "indriver_income", label: "InDriver" },
+  { key: "other_income", label: "Outros" },
 ];
 const registerExpenseTypes = [
   { key: "fuel_expense", label: "Combustível" },
@@ -605,6 +606,7 @@ export function RegisterPage() {
     uber_income: "",
     ninety_nine_income: "",
     indriver_income: "",
+    other_income: "",
     fuel_expense: "",
     street_food_expense: "",
     oil_expense: "",
@@ -622,6 +624,7 @@ export function RegisterPage() {
       uber_income: String(editState.uberIncome || ""),
       ninety_nine_income: String(editState.ninetyNineIncome || ""),
       indriver_income: String(editState.indriverIncome || ""),
+      other_income: String(editState.otherIncome || ""),
       fuel_expense: String(editState.fuelExpense || ""),
       street_food_expense: String(editState.streetFoodExpense || ""),
       oil_expense: String(editState.oilExpense || ""),
@@ -695,6 +698,7 @@ export function RegisterPage() {
         uber_income: "",
         ninety_nine_income: "",
         indriver_income: "",
+        other_income: "",
         fuel_expense: "",
         street_food_expense: "",
         oil_expense: "",
@@ -906,6 +910,7 @@ export function HistoryPage() {
                 <th>Uber</th>
                 <th>99</th>
                 <th>InDriver</th>
+                <th>Outras rec.</th>
                 <th>Comb.</th>
                 <th>Rua</th>
                 <th>Oleo</th>
@@ -927,6 +932,7 @@ export function HistoryPage() {
                     <td>{currency(record.uberIncome)}</td>
                     <td>{currency(record.ninetyNineIncome)}</td>
                     <td>{currency(record.indriverIncome)}</td>
+                    <td>{currency(record.otherIncome)}</td>
                     <td>{currency(record.fuelExpense)}</td>
                     <td>{currency(record.streetFoodExpense)}</td>
                     <td>{currency(record.oilExpense)}</td>
