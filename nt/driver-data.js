@@ -142,12 +142,20 @@ export const getMonthLabel = (monthKey) => {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 };
 
+const MONTH_OPTIONS_YEARS_AHEAD = 2;
+
 export const getMonthOptions = (records = []) => {
-  const now = new Date();
+  const currentYear = new Date().getFullYear();
+  const recordYears = records
+    .map((record) => Number(String(record?.date || "").slice(0, 4)))
+    .filter((year) => Number.isInteger(year) && year >= 2000 && year <= 2100);
+  const firstYear = Math.min(currentYear, ...recordYears);
+  const lastYear = Math.max(currentYear + MONTH_OPTIONS_YEARS_AHEAD, ...recordYears);
   const options = [];
-  for (let month = 0; month < 12; month += 1) {
-    const date = new Date(now.getFullYear(), month, 1);
-    options.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
+  for (let year = firstYear; year <= lastYear; year += 1) {
+    for (let month = 1; month <= 12; month += 1) {
+      options.push(`${year}-${String(month).padStart(2, "0")}`);
+    }
   }
   return options;
 };
