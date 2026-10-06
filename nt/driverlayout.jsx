@@ -218,18 +218,6 @@ export default function DriverLayout() {
             {isDashboardPage || isHistoryPage || isPerformancePage || isSummaryPage || isExpensesPage || isReceitasPage || isResumoPage ? (
               <>
                 <select
-                  className="app-topbar-month-select app-topbar-year-select"
-                  aria-label={`Selecionar ano ${topbarPeriodLabel}`}
-                  value={selectedYear}
-                  onChange={(event) => setSelectedPeriod(Number(event.target.value), selectedMonth)}
-                >
-                  {topbarYearOptions.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-                <select
                   className="app-topbar-month-select"
                   aria-label={`Selecionar mês ${topbarPeriodLabel}`}
                   value={selectedMonth}
@@ -238,6 +226,18 @@ export default function DriverLayout() {
                   {MONTH_NAMES.map((name, index) => (
                     <option key={name} value={index + 1}>
                       {name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="app-topbar-month-select app-topbar-year-select"
+                  aria-label={`Selecionar ano ${topbarPeriodLabel}`}
+                  value={selectedYear}
+                  onChange={(event) => setSelectedPeriod(Number(event.target.value), selectedMonth)}
+                >
+                  {topbarYearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
                     </option>
                   ))}
                 </select>
