@@ -1073,6 +1073,8 @@ export function SummaryPage() {
   const [dailyGoals, setDailyGoals] = useState(() => getSummaryMonthDailyData(month));
   const [dailyGoalsError, setDailyGoalsError] = useState("");
   const [savingDayOff, setSavingDayOff] = useState("");
+  const [editingGoalDay, setEditingGoalDay] = useState("");
+  const [dayGoalDraft, setDayGoalDraft] = useState("");
   const [dailyGoalsVersion, setDailyGoalsVersion] = useState(0);
   const monthRecords = useMemo(() => filterRecordsByMonth(records, month), [records, month]);
   const monthDailyGoals = useMemo(() => dailyGoals || getSummaryMonthDailyData(month), [dailyGoals, month, dailyGoalsVersion]);
@@ -1102,6 +1104,15 @@ export function SummaryPage() {
       if (row.dayOff) return true;
       return row.done > 0;
     };
+    const hasManualGoal = (row) => row.goal !== "" && row.goal !== null && row.goal !== undefined;
+
+    // Dias com meta fixa usam o valor escolhido; o restante da meta mensal
+    // e dividido entre os dias automaticos.
+    const splitRemaining = (remainingGoal, candidates) => {
+      const manualSum = candidates.filter(hasManualGoal).reduce((sum, candidate) => sum + Number(candidate.goal), 0);
+      const autoCount = candidates.filter((candidate) => !hasManualGoal(candidate)).length;
+      return autoCount > 0 ? Math.max(0, (remainingGoal - manualSum) / autoCount) : 0;
+    };
 
     const suggestedByDay = {};
     const closedByDay = {};
@@ -1116,18 +1127,20 @@ export function SummaryPage() {
       }
 
       const isClosed = isClosedRow(row);
-      const remainingWorkDays = rows.slice(index).filter((candidate) => !candidate.dayOff).length;
-      const remainingOpenDays = rows.slice(index).filter((candidate) => !candidate.dayOff && !isClosedRow(candidate)).length;
-      const dayGoal = isClosed
-        ? (remainingWorkDays > 0 ? Math.max(0, remainingGoal / remainingWorkDays) : 0)
-        : (openDayGoal ?? (remainingOpenDays > 0 ? Math.max(0, remainingGoal / remainingOpenDays) : 0));
+      let dayGoal;
+      if (hasManualGoal(row)) {
+        dayGoal = Number(row.goal);
+      } else if (isClosed) {
+        dayGoal = splitRemaining(remainingGoal, rows.slice(index).filter((candidate) => !candidate.dayOff));
+      } else {
+        if (openDayGoal === null) {
+          openDayGoal = splitRemaining(remainingGoal, rows.filter((candidate) => !isClosedRow(candidate)));
+        }
+        dayGoal = openDayGoal;
+      }
 
       suggestedByDay[row.day] = dayGoal;
       closedByDay[row.day] = isClosed;
-
-      if (!isClosed && openDayGoal === null) {
-        openDayGoal = dayGoal;
-      }
 
       if (isClosed) {
         remainingGoal = Math.max(0, remainingGoal - row.done);
@@ -1137,6 +1150,7 @@ export function SummaryPage() {
     return rows.map((row) => ({
       ...row,
       isClosed: Boolean(closedByDay[row.day]),
+      isManualGoal: hasManualGoal(row),
       suggested: suggestedByDay[row.day] ?? 0,
     }));
   }, [goal, month, monthDailyGoals, monthRecords]);
@@ -1168,22 +1182,46 @@ export function SummaryPage() {
     };
   }, [month, dailyGoalsVersion]);
 
-  const toggleDayOff = async (row) => {
-    const nextDayOff = !row.dayOff;
+  const saveDayValues = async (row, values, errorMessage) => {
     const dayKey = String(row.day);
-    const nextLocalStore = setSummaryDayValues(month, row.day, { dayOff: nextDayOff });
+    const nextLocalStore = setSummaryDayValues(month, row.day, values);
     setDailyGoals(nextLocalStore[month] || {});
     setDailyGoalsError("");
     setSavingDayOff(dayKey);
 
     try {
-      await saveSummaryDayValues(month, row.day, { dayOff: nextDayOff });
+      await saveSummaryDayValues(month, row.day, values);
     } catch (error) {
-      setDailyGoalsError(error.message || "Não foi possível salvar a folga.");
+      setDailyGoalsError(error.message || errorMessage);
     } finally {
       setSavingDayOff("");
       setDailyGoalsVersion((current) => current + 1);
     }
+  };
+
+  // O servidor regrava goal e dayOff juntos, entao os dois sempre vao no payload.
+  const toggleDayOff = (row) =>
+    saveDayValues(row, { goal: row.isManualGoal ? row.goal : null, dayOff: !row.dayOff }, "Não foi possível salvar a folga.");
+
+  const startEditingDayGoal = (row) => {
+    setEditingGoalDay(String(row.day));
+    setDayGoalDraft(String(Math.round(row.suggested * 100) / 100));
+  };
+
+  const saveDayGoal = async (event, row) => {
+    event.preventDefault();
+    const nextGoal = Number(dayGoalDraft);
+    if (dayGoalDraft === "" || !Number.isFinite(nextGoal) || nextGoal < 0) {
+      setDailyGoalsError("Informe uma meta do dia igual ou maior que zero.");
+      return;
+    }
+    setEditingGoalDay("");
+    await saveDayValues(row, { goal: nextGoal, dayOff: row.dayOff }, "Não foi possível salvar a meta do dia.");
+  };
+
+  const resetDayGoal = (row) => {
+    setEditingGoalDay("");
+    return saveDayValues(row, { goal: null, dayOff: row.dayOff }, "Não foi possível salvar a meta do dia.");
   };
 
   const saveMonthlyGoal = (event) => {
@@ -1253,7 +1291,7 @@ export function SummaryPage() {
 
                 <div className="summary-goal-card-values">
                   <div>
-                    <span>Meta do dia</span>
+                    <span>{row.isManualGoal && !row.dayOff ? "Meta do dia (fixa)" : "Meta do dia"}</span>
                     <strong>{row.dayOff ? "Folga" : currency(row.suggested)}</strong>
                   </div>
                   <div>
@@ -1261,6 +1299,48 @@ export function SummaryPage() {
                     <strong>{currency(row.done)}</strong>
                   </div>
                 </div>
+
+                {editingGoalDay === String(row.day) ? (
+                  <form onSubmit={(event) => saveDayGoal(event, row)} style={{ display: "grid", gap: 8 }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      aria-label={`Meta do dia ${row.day}`}
+                      style={fieldStyle}
+                      value={dayGoalDraft}
+                      onChange={(event) => setDayGoalDraft(event.target.value)}
+                      autoFocus
+                    />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button type="submit" className="password-btn" style={{ flex: 1 }}>Salvar</button>
+                      <button type="button" className="logout-btn" style={{ flex: 1 }} onClick={() => setEditingGoalDay("")}>Cancelar</button>
+                    </div>
+                  </form>
+                ) : !row.dayOff ? (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      className="password-btn"
+                      style={{ flex: 1 }}
+                      disabled={savingDayOff === String(row.day)}
+                      onClick={() => startEditingDayGoal(row)}
+                    >
+                      Alterar meta
+                    </button>
+                    {row.isManualGoal ? (
+                      <button
+                        type="button"
+                        className="logout-btn"
+                        style={{ flex: 1 }}
+                        disabled={savingDayOff === String(row.day)}
+                        onClick={() => resetDayGoal(row)}
+                      >
+                        Voltar ao automático
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <button
                   type="button"
