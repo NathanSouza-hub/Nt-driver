@@ -20,35 +20,36 @@ const PIX_KEY_OWNER = process.env.PIX_KEY_OWNER || '';
 const PIX_KEY_CITY = process.env.PIX_KEY_CITY || '';
 
 const getTrialEndsAt = () => new Date(Date.now() + (SUBSCRIPTION_TRIAL_DAYS * 24 * 60 * 60 * 1000));
-const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
-const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || '';
-const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'NT Driver';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+// Sem dominio verificado no Resend, so da para usar onboarding@resend.dev,
+// que entrega apenas para o email dono da conta Resend.
+const RESEND_FROM = process.env.RESEND_FROM || 'NT Driver <onboarding@resend.dev>';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 const PASSWORD_MIN_LENGTH = 8;
 
-const hasBrevoConfig = Boolean(BREVO_API_KEY && BREVO_SENDER_EMAIL);
+const hasEmailConfig = Boolean(RESEND_API_KEY);
 
 const sendTransactionalEmail = async ({ to, subject, text, html }) => {
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+  const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      'api-key': BREVO_API_KEY
+      Authorization: `Bearer ${RESEND_API_KEY}`
     },
     body: JSON.stringify({
-      sender: { email: BREVO_SENDER_EMAIL, name: BREVO_SENDER_NAME },
-      to: [{ email: to }],
+      from: RESEND_FROM,
+      to: [to],
       subject,
-      textContent: text,
-      htmlContent: html
+      text,
+      html
     }),
     signal: AbortSignal.timeout(10000)
   });
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(`Brevo respondeu ${response.status}: ${body}`);
+    throw new Error(`Resend respondeu ${response.status}: ${body}`);
   }
 };
 
@@ -129,7 +130,7 @@ const serializeUser = (user) => ({
 });
 
 const sendResetEmail = async (email, link) => {
-  if (!hasBrevoConfig) {
+  if (!hasEmailConfig) {
     console.log(`[auth] Link de reset para ${email}: ${link}`);
     return;
   }
@@ -143,7 +144,7 @@ const sendResetEmail = async (email, link) => {
 };
 
 const sendVerificationEmail = async (email, link) => {
-  if (!hasBrevoConfig) {
+  if (!hasEmailConfig) {
     console.log(`[auth] Link de verificação para ${email}: ${link}`);
     return;
   }

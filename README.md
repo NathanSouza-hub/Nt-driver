@@ -93,7 +93,7 @@ cada push na branch `main` gera um deploy automatico.
 2. Preencher as variaveis marcadas como `sync: false`:
 	- `DATABASE_URL` do PostgreSQL/Supabase
 	- `APP_BASE_URL` com a URL publica do Render
-	- `BREVO_API_KEY`
+	- `RESEND_API_KEY` e `RESEND_FROM` (ex.: `NT Driver <nao-responda@seudominio.com>`, com o dominio verificado no Resend)
 3. O Render roda `npm ci && npm run build` e depois `npm start`
 4. No plano gratuito o disco nao e persistente: use `DB_CLIENT=postgres` (SQLite perderia os dados)
 

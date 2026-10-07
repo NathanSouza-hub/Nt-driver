@@ -23,9 +23,7 @@ services:
         sync: false
       - key: APP_BASE_URL
         sync: false
-      - key: BREVO_SENDER_EMAIL
-        value: ntdriverapp@gmail.com
-      - key: BREVO_SENDER_NAME
-        value: NT Driver
-      - key: BREVO_API_KEY
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
         sync: false
