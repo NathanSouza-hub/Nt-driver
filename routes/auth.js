@@ -114,7 +114,7 @@ const assignSessionUser = (req, user) => {
   req.session.userName = user.name;
   req.session.userEmail = user.email;
   req.session.isAdmin = Boolean(user.is_admin);
-  req.session.profileType = serializeProfileType(user.profile_type);
+  req.session.profileType = normalizeProfileType(user.profile_type);
 };
 
 const serializeUser = (user) => ({
