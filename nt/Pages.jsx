@@ -1199,9 +1199,35 @@ export function SummaryPage() {
     }
   };
 
+  // Dias ja preenchidos guardam a meta que tinham antes da folga, para que
+  // marcar/remover folga so redistribua a meta entre os dias ainda abertos.
+  const freezeClosedDayGoals = async (exceptDay) => {
+    const rowsToFreeze = dailyRows.filter((candidate) => (
+      candidate.day !== exceptDay && candidate.isClosed && !candidate.dayOff && !candidate.isManualGoal
+    ));
+    if (!rowsToFreeze.length) return;
+
+    let nextLocalStore = null;
+    const frozenValues = rowsToFreeze.map((candidate) => {
+      const values = { goal: Math.round(candidate.suggested * 100) / 100, dayOff: false };
+      nextLocalStore = setSummaryDayValues(month, candidate.day, values);
+      return { day: candidate.day, values };
+    });
+    setDailyGoals(nextLocalStore[month] || {});
+
+    await Promise.all(frozenValues.map(({ day, values }) => saveSummaryDayValues(month, day, values)));
+  };
+
   // O servidor regrava goal e dayOff juntos, entao os dois sempre vao no payload.
-  const toggleDayOff = (row) =>
-    saveDayValues(row, { goal: row.isManualGoal ? row.goal : null, dayOff: !row.dayOff }, "Não foi possível salvar a folga.");
+  const toggleDayOff = async (row) => {
+    try {
+      await freezeClosedDayGoals(row.day);
+    } catch (error) {
+      setDailyGoalsError(error.message || "Não foi possível salvar a folga.");
+      return;
+    }
+    await saveDayValues(row, { goal: row.isManualGoal ? row.goal : null, dayOff: !row.dayOff }, "Não foi possível salvar a folga.");
+  };
 
   const startEditingDayGoal = (row) => {
     setEditingGoalDay(String(row.day));
