@@ -6,6 +6,7 @@ import { isPessoalProfile } from "./profile-type";
 import AuthScreen from "./AuthScreen";
 import SubscriptionGate from "./Subscription";
 import DriverSidebar from "./DriverSidebar";
+import ThemeToggle from "./ThemeToggle";
 
 const PERSONAL_ALLOWED_PATHS = new Set(["/driver", "/driver/receitas", "/driver/expenses", "/driver/resumo", "/driver/profile"]);
 const PERSONAL_HOME_PATH = "/driver";
@@ -247,6 +248,8 @@ export default function DriverLayout() {
 
           <div className="app-topbar-spacer" aria-hidden="true" />
 
+          <div className="app-topbar-right">
+          <ThemeToggle />
           <div className="app-topbar-profile-wrap" ref={profileMenuRef}>
             <button
               type="button"
@@ -284,6 +287,7 @@ export default function DriverLayout() {
                 </button>
               </div>
             ) : null}
+          </div>
           </div>
         </header>
 

@@ -303,7 +303,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                 <button
                   type="button"
                   className="auth-link-button"
-                  style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0, fontSize: 15 }}
+                  style={{ background: 'none', border: 'none', color: 'var(--blue-soft)', cursor: 'pointer', padding: 0, fontSize: 15 }}
                   onClick={() => {
                     setForgotPasswordEmail(loginForm.email);
                     setMode("forgot");
@@ -326,7 +326,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                   className="auth-link-button"
                   onClick={handleResendVerification}
                   disabled={isResendingVerification}
-                  style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", padding: 0, fontSize: 15, textAlign: "left" }}
+                  style={{ background: "none", border: "none", color: "var(--blue-soft)", cursor: "pointer", padding: 0, fontSize: 15, textAlign: "left" }}
                 >
                   {isResendingVerification ? "Reenviando verificação..." : `Reenviar verificação para ${pendingVerificationEmail}`}
                 </button>
@@ -334,7 +334,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
             </form>
           ) : mode === "forgot" ? (
             <form className="auth-login-form" onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <strong className="auth-form-title" style={{ fontSize: 22, color: '#60a5fa', marginBottom: 8 }}>Recuperar senha</strong>
+              <strong className="auth-form-title" style={{ fontSize: 22, color: 'var(--blue-soft)', marginBottom: 8 }}>Recuperar senha</strong>
               <label htmlFor="forgot-password-email" style={{ fontWeight: 600, color: 'var(--text)' }}>Email</label>
               <input
                 id="forgot-password-email"
@@ -356,7 +356,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
             </form>
           ) : mode === "reset" ? (
             <form className="auth-register-form" onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <strong className="auth-form-title" style={{ fontSize: 22, color: '#60a5fa', marginBottom: 8 }}>Redefinir senha</strong>
+              <strong className="auth-form-title" style={{ fontSize: 22, color: 'var(--blue-soft)', marginBottom: 8 }}>Redefinir senha</strong>
               <label htmlFor="reset-password-email" style={{ fontWeight: 600, color: 'var(--text)' }}>Email</label>
               <input id="reset-password-email" type="email" value={resetForm.email} disabled />
               <label htmlFor="reset-password-new" style={{ fontWeight: 600, color: 'var(--text)' }}>Nova senha</label>
@@ -394,7 +394,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
             </form>
           ) : canRegister ? (
             <form className="auth-register-form" onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <strong className="auth-form-title" style={{ fontSize: 22, color: '#60a5fa', marginBottom: 8 }}>Cadastrar</strong>
+              <strong className="auth-form-title" style={{ fontSize: 22, color: 'var(--blue-soft)', marginBottom: 8 }}>Cadastrar</strong>
               <div style={{ display: 'flex', gap: 8 }} role="group" aria-label="Tipo de perfil">
                 <button
                   type="button"
@@ -460,7 +460,7 @@ export default function AuthScreen({ canRegister, onLogin, onRegister }) {
                   {isRegisterPasswordVisible ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                 </button>
               </div>
-              <p style={{ margin: "-8px 0 0", color: passwordValidationMessage ? "#f87171" : "var(--muted)", fontSize: 13 }}>
+              <p style={{ margin: "-8px 0 0", color: passwordValidationMessage ? "var(--red-soft)" : "var(--muted)", fontSize: 13 }}>
                 {passwordValidationMessage || PASSWORD_HINT}
               </p>
               <div className="auth-main-actions" style={{ display: 'flex', gap: 12, marginTop: 8 }}>

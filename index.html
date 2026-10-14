@@ -6,6 +6,17 @@
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <link rel="manifest" href="/manifest.json" />
   <title>NT Driver</title>
+  <script>
+    // Aplica o tema antes do CSS para não piscar o tema errado. Usa a mesma chave do next-themes.
+    (function () {
+      var theme = "system";
+      try { theme = localStorage.getItem("theme") || "system"; } catch (e) {}
+      var dark = theme === "dark" || (theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      var root = document.documentElement;
+      root.classList.add(dark ? "dark" : "light");
+      root.style.colorScheme = dark ? "dark" : "light";
+    })();
+  </script>
   <link rel="stylesheet" href="/styles.css?v=20261006-1" />
 </head>
 <body>

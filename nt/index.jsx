@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Routes, Route, useOutletContext } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import DriverLayout from "./driverlayout";
 import Dashboard from "./Dashboard";
 import { isPessoalProfile } from "./profile-type";
@@ -27,6 +28,7 @@ const root = createRoot(document.getElementById("root"));
 
 root.render(
   <React.StrictMode>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/driver" replace />} />
@@ -46,5 +48,6 @@ root.render(
         <Route path="*" element={<Navigate to="/driver" replace />} />
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   </React.StrictMode>
 );

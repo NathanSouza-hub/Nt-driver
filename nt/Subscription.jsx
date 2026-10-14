@@ -72,19 +72,19 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
         </div>
 
         {!isTrialExpired && user?.subscriptionStatus === "trial" ? (
-          <p style={{ background: "rgba(37, 99, 235, 0.14)", color: "#60a5fa", borderRadius: 10, padding: "10px 14px", fontSize: 14, textAlign: "center" }}>
+          <p style={{ background: "rgba(37, 99, 235, 0.14)", color: "var(--blue-soft)", borderRadius: 10, padding: "10px 14px", fontSize: 14, textAlign: "center" }}>
             Você ainda tem {daysLeft} dia{daysLeft === 1 ? "" : "s"} de teste grátis. Pode pagar a qualquer momento para não perder o acesso depois.
           </p>
         ) : null}
 
         {notified ? (
-          <div style={{ background: "rgba(22, 163, 74, 0.16)", color: "#4ade80", borderRadius: 10, padding: "14px", fontSize: 14, textAlign: "center", marginTop: 12 }}>
+          <div style={{ background: "rgba(22, 163, 74, 0.16)", color: "var(--green-soft)", borderRadius: 10, padding: "14px", fontSize: 14, textAlign: "center", marginTop: 12 }}>
             Recebemos seu aviso de pagamento. Assim que confirmarmos, seu acesso é liberado automaticamente.
           </div>
         ) : null}
 
         {loadError ? (
-          <p style={{ color: "#f87171", fontSize: 14, textAlign: "center", marginTop: 12 }}>{loadError}</p>
+          <p style={{ color: "var(--red-soft)", fontSize: 14, textAlign: "center", marginTop: 12 }}>{loadError}</p>
         ) : null}
 
         {pixInfo ? (
@@ -137,7 +137,7 @@ export default function SubscriptionGate({ user, onLogout, onRefresh }) {
           <button
             type="button"
             className="auth-link-button"
-            style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", padding: 0, fontSize: 14 }}
+            style={{ background: "none", border: "none", color: "var(--blue-soft)", cursor: "pointer", padding: 0, fontSize: 14 }}
             onClick={onLogout}
           >
             Sair

@@ -357,7 +357,7 @@ export default function Dashboard() {
                   color: "var(--text)",
                   fontSize: "2rem",
                   fontWeight: 700,
-                  background: `conic-gradient(#3b82f6 0 ${percentual}%, #1d2740 ${percentual}% 100%)`,
+                  background: `conic-gradient(#3b82f6 0 ${percentual}%, var(--panel-soft) ${percentual}% 100%)`,
                 }}
               >
                 <div
