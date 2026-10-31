@@ -574,6 +574,37 @@ const initPostgresDb = async () => {
 
   await query('CREATE INDEX IF NOT EXISTS idx_summary_daily_goals_user_month ON summary_daily_goals(user_id, year_month)');
 
+  // Metas: origem da meta do dia e diferença já tratada (para perguntar de novo se o realizado mudar).
+  await query('ALTER TABLE summary_daily_goals ADD COLUMN IF NOT EXISTS goal_origin TEXT');
+  await query('ALTER TABLE summary_daily_goals ADD COLUMN IF NOT EXISTS settled_done DOUBLE PRECISION');
+  await query('ALTER TABLE summary_daily_goals ADD COLUMN IF NOT EXISTS settled_goal DOUBLE PRECISION');
+  await query(`
+    CREATE TABLE IF NOT EXISTS summary_monthly_goals (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      goal DOUBLE PRECISION NOT NULL,
+      confirmed_at TIMESTAMPTZ,
+      confirmed_total DOUBLE PRECISION,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, year_month)
+    )
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS goal_redistributions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      source_day INTEGER,
+      kind TEXT NOT NULL,
+      amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+      changes TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_goal_redistributions_user_month ON goal_redistributions(user_id, year_month)');
+
   // Aba Salário: recebimentos de salário e benefícios (independente das despesas gerais).
   await query(`
     CREATE TABLE IF NOT EXISTS salary_receipts (
@@ -810,6 +841,31 @@ const initSqliteDb = async () => {
       UNIQUE (user_id, series_key, origin_month)
     );
 
+    CREATE TABLE IF NOT EXISTS summary_monthly_goals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      goal REAL NOT NULL,
+      confirmed_at TEXT,
+      confirmed_total REAL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, year_month)
+    );
+
+    CREATE TABLE IF NOT EXISTS goal_redistributions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      source_day INTEGER,
+      kind TEXT NOT NULL,
+      amount REAL NOT NULL DEFAULT 0,
+      changes TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_goal_redistributions_user_month ON goal_redistributions(user_id, year_month);
+
     CREATE TABLE IF NOT EXISTS expense_categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -895,6 +951,9 @@ const initSqliteDb = async () => {
   await ensureSqliteColumn('personal_expenses', 'end_month', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'notes', 'TEXT');
   await ensureSqliteColumn('personal_sheet_values', 'day_of_month', 'INTEGER');
+  await ensureSqliteColumn('summary_daily_goals', 'goal_origin', 'TEXT');
+  await ensureSqliteColumn('summary_daily_goals', 'settled_done', 'REAL');
+  await ensureSqliteColumn('summary_daily_goals', 'settled_goal', 'REAL');
 
   await query(`
     UPDATE users

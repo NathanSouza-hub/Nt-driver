@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useOutletContext, useSearchParams } from "react-router-dom";
 import { FaArrowTrendUp, FaCircleArrowDown, FaCircleArrowUp } from "react-icons/fa6";
 import { currency, filterRecordsByMonth, formatDate, getCurrentMonthKey, getMonthlyGoalForMonth, summarizeRecords } from "./driver-data";
+import { fetchGoalsMonth, resolveMonthlyGoal } from "./goals-api";
 import { apiFetch } from "./http";
 import { getPersonalExpenseCategoryLabel } from "./Pages";
 import SummaryCards from "./SummaryCards";
@@ -212,7 +213,20 @@ function UberTab({ monthRecords, month }) {
   const summary = useMemo(() => summarizeRecords(monthRecords), [monthRecords]);
   const totalIncome = roundMoney(summary.income);
   const totalExpense = roundMoney(summary.expense);
-  const meta = getMonthlyGoalForMonth(month);
+  // Meta mensal salva no banco (a mesma da página Metas); enquanto carrega, usa o valor local.
+  const [meta, setMeta] = useState(() => getMonthlyGoalForMonth(month));
+  useEffect(() => {
+    let isMounted = true;
+    setMeta(getMonthlyGoalForMonth(month));
+    fetchGoalsMonth(month)
+      .then((payload) => {
+        if (isMounted) setMeta(resolveMonthlyGoal(payload));
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [month]);
   const percentual = meta > 0 ? Math.min(100, Math.round((totalIncome / meta) * 100)) : 0;
   const topExpenses = Object.entries(summary.expenseByType).filter(([, value]) => value > 0).sort((left, right) => right[1] - left[1]).slice(0, 6);
   const cards = [

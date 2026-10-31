@@ -6,6 +6,7 @@ import DriverLayout from "./driverlayout";
 import Dashboard from "./Dashboard";
 import { isPessoalProfile } from "./profile-type";
 import { ExpensesPage } from "./ExpensesModule";
+import { SummaryPage } from "./GoalsPage";
 import {
   HistoryPage,
   NotesPage,
@@ -15,7 +16,6 @@ import {
   PersonalResumoPage,
   ProfilePage,
   RegisterPage,
-  SummaryPage,
   UsersPage,
 } from "./Pages";
 

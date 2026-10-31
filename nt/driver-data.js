@@ -111,6 +111,20 @@ export const getMonthlyGoalForMonth = (monthKey, fallback = DEFAULT_MONTHLY_GOAL
   return fallback;
 };
 
+// Meta mensal salva explicitamente neste navegador (antes de ir para o banco). null se não houver.
+export const getStoredMonthlyGoal = (monthKey) => {
+  const normalizedMonth = String(monthKey || "").trim();
+  const store = parseMonthlyGoalsStore();
+  if (Number.isFinite(store[normalizedMonth]) && store[normalizedMonth] > 0) return store[normalizedMonth];
+  if (typeof localStorage !== "undefined" && normalizedMonth === getCurrentMonthKey()) {
+    const legacyValue = Number(localStorage.getItem(MONTHLY_GOAL_KEY));
+    if (Number.isFinite(legacyValue) && legacyValue > 0) return legacyValue;
+  }
+  return null;
+};
+
+export const DEFAULT_MONTHLY_GOAL_VALUE = DEFAULT_MONTHLY_GOAL;
+
 export const setMonthlyGoalForMonth = (monthKey, value) => {
   if (typeof localStorage === "undefined") return;
 

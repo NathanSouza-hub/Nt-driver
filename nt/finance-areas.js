@@ -94,6 +94,46 @@ export function getTikTokSalesTotal(sales = [], monthKey) {
   return sumAmounts(sales.filter((sale) => String(sale.date || "").startsWith(monthKey)));
 }
 
+const TIKTOK_WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+// Totais da planilha do TikTok: linhas = dias do mês, colunas = vendedores visíveis.
+// Retorna o total de cada dia, de cada vendedor e o total geral do mês (soma de todas as células do mês).
+export function buildTikTokSheet(sellers = [], sales = [], monthKey) {
+  const totalDays = getDaysInMonth(monthKey);
+  const cells = new Map();
+  sales
+    .filter((sale) => String(sale.date || "").startsWith(monthKey))
+    .forEach((sale) => cells.set(`${sale.seller_id}|${sale.date}`, Number(sale.amount) || 0));
+
+  const days = Array.from({ length: totalDays }, (_, index) => {
+    const day = index + 1;
+    const date = `${monthKey}-${String(day).padStart(2, "0")}`;
+    const weekdayIndex = new Date(`${date}T00:00:00`).getDay();
+    const total = roundMoney(sellers.reduce((sum, seller) => sum + (cells.get(`${seller.id}|${date}`) || 0), 0));
+    return {
+      date,
+      label: `${String(day).padStart(2, "0")}/${monthKey.slice(5, 7)}`,
+      weekday: TIKTOK_WEEKDAYS[weekdayIndex],
+      isWeekend: weekdayIndex === 0 || weekdayIndex === 6,
+      total,
+    };
+  });
+
+  const sellerTotals = sellers.map((seller) => ({
+    sellerId: seller.id,
+    total: roundMoney(days.reduce((sum, day) => sum + (cells.get(`${seller.id}|${day.date}`) || 0), 0)),
+  }));
+
+  return { days, cells, sellerTotals, grandTotal: getTikTokSalesTotal(sales, monthKey) };
+}
+
+// Resumo do TikTok no mês: receitas (planilha), despesas próprias e resultado líquido.
+export function getTikTokSummary(sales = [], expenses = [], monthKey) {
+  const revenue = getTikTokSalesTotal(sales, monthKey);
+  const expenseTotal = sumAmounts(expenses.filter((item) => String(item.date || "").startsWith(monthKey)));
+  return { revenue, expenses: expenseTotal, net: roundMoney(revenue - expenseTotal) };
+}
+
 // Converte o texto digitado na célula para número. Aceita "55,10", "1.234,56" e "55.10".
 export function parseMoneyInput(raw) {
   const text = String(raw ?? "").trim().replace(/^R\$\s*/i, "").replace(/\s/g, "");
