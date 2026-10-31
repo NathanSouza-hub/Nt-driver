@@ -364,6 +364,10 @@ const initPostgresDb = async () => {
 
   await query('ALTER TABLE personal_expenses ADD COLUMN IF NOT EXISTS entry_key TEXT');
   await query('ALTER TABLE personal_expenses ADD COLUMN IF NOT EXISTS status_months TEXT');
+  // Programação da despesa: tipo de recorrência, mês de encerramento e observações.
+  await query('ALTER TABLE personal_expenses ADD COLUMN IF NOT EXISTS recurrence TEXT');
+  await query('ALTER TABLE personal_expenses ADD COLUMN IF NOT EXISTS end_month TEXT');
+  await query('ALTER TABLE personal_expenses ADD COLUMN IF NOT EXISTS notes TEXT');
   await query(`
     WITH ranked AS (
       SELECT
@@ -382,7 +386,10 @@ const initPostgresDb = async () => {
             COALESCE(due_day, -1),
             COALESCE(installments, ''),
             COALESCE(is_fixed::text, 'null'),
-            COALESCE(installments_start_month, '')
+            COALESCE(installments_start_month, ''),
+            COALESCE(recurrence, ''),
+            COALESCE(end_month, ''),
+            COALESCE(notes, '')
           ORDER BY id DESC
         ) AS duplicate_rank
       FROM personal_expenses
@@ -400,6 +407,43 @@ const initPostgresDb = async () => {
   await query('CREATE INDEX IF NOT EXISTS idx_personal_expenses_user_id ON personal_expenses(user_id)');
   await query('CREATE INDEX IF NOT EXISTS idx_personal_expenses_user_date ON personal_expenses(user_id, date)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS idx_personal_expenses_user_entry_key ON personal_expenses(user_id, entry_key)');
+
+  // Ocorrências mensais materializadas das despesas (edição individual, pagamento, congelamento, exclusão).
+  // Meses sem registro aqui são calculados a partir da programação em personal_expenses.
+  await query(`
+    CREATE TABLE IF NOT EXISTS expense_occurrences (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      series_key TEXT NOT NULL,
+      origin_month TEXT NOT NULL,
+      competence_month TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+      due_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendente',
+      paid_at TIMESTAMPTZ,
+      notes TEXT,
+      installment_label TEXT,
+      recurrence TEXT,
+      is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+      transfer_history TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, series_key, origin_month)
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_expense_occurrences_user_competence ON expense_occurrences(user_id, competence_month)');
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS expense_categories (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, name)
+    )
+  `);
 
   await query(`
     CREATE TABLE IF NOT EXISTS email_verification_tokens (
@@ -529,6 +573,60 @@ const initPostgresDb = async () => {
   `);
 
   await query('CREATE INDEX IF NOT EXISTS idx_summary_daily_goals_user_month ON summary_daily_goals(user_id, year_month)');
+
+  // Aba Salário: recebimentos de salário e benefícios (independente das despesas gerais).
+  await query(`
+    CREATE TABLE IF NOT EXISTS salary_receipts (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      receipt_type TEXT NOT NULL,
+      amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+      date TEXT NOT NULL,
+      recurrence TEXT NOT NULL DEFAULT 'unica' CHECK (recurrence IN ('unica', 'mensal')),
+      recurrence_end_month TEXT,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_salary_receipts_user_date ON salary_receipts(user_id, date)');
+
+  // Aba TikTok: vendedores (colunas), vendas diárias (células) e despesas próprias.
+  await query(`
+    CREATE TABLE IF NOT EXISTS tiktok_sellers (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      archived_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS tiktok_sales (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      seller_id BIGINT NOT NULL REFERENCES tiktok_sellers(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, seller_id, date)
+    )
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS tiktok_expenses (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      category TEXT,
+      amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+      date TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_tiktok_sellers_user ON tiktok_sellers(user_id, sort_order, id)');
+  await query('CREATE INDEX IF NOT EXISTS idx_tiktok_sales_user_date ON tiktok_sales(user_id, date)');
+  await query('CREATE INDEX IF NOT EXISTS idx_tiktok_expenses_user_date ON tiktok_expenses(user_id, date)');
 
   await query(`
     CREATE OR REPLACE FUNCTION set_personal_sheet_values_updated_at()
@@ -690,6 +788,84 @@ const initSqliteDb = async () => {
       UNIQUE (user_id, year_month, day_of_month)
     );
 
+    CREATE TABLE IF NOT EXISTS expense_occurrences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      series_key TEXT NOT NULL,
+      origin_month TEXT NOT NULL,
+      competence_month TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      amount REAL NOT NULL DEFAULT 0,
+      due_date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendente',
+      paid_at TEXT,
+      notes TEXT,
+      installment_label TEXT,
+      recurrence TEXT,
+      is_deleted INTEGER NOT NULL DEFAULT 0,
+      transfer_history TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, series_key, origin_month)
+    );
+
+    CREATE TABLE IF NOT EXISTS expense_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, name)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_expense_occurrences_user_competence ON expense_occurrences(user_id, competence_month);
+
+    CREATE TABLE IF NOT EXISTS salary_receipts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      receipt_type TEXT NOT NULL,
+      amount REAL NOT NULL DEFAULT 0,
+      date TEXT NOT NULL,
+      recurrence TEXT NOT NULL DEFAULT 'unica' CHECK (recurrence IN ('unica', 'mensal')),
+      recurrence_end_month TEXT,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS tiktok_sellers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      archived_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS tiktok_sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      seller_id INTEGER NOT NULL REFERENCES tiktok_sellers(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      amount REAL NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (user_id, seller_id, date)
+    );
+
+    CREATE TABLE IF NOT EXISTS tiktok_expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      category TEXT,
+      amount REAL NOT NULL DEFAULT 0,
+      date TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_salary_receipts_user_date ON salary_receipts(user_id, date);
+    CREATE INDEX IF NOT EXISTS idx_tiktok_sellers_user ON tiktok_sellers(user_id, sort_order, id);
+    CREATE INDEX IF NOT EXISTS idx_tiktok_sales_user_date ON tiktok_sales(user_id, date);
+    CREATE INDEX IF NOT EXISTS idx_tiktok_expenses_user_date ON tiktok_expenses(user_id, date);
     CREATE INDEX IF NOT EXISTS idx_records_user_id ON records(user_id);
     CREATE INDEX IF NOT EXISTS idx_records_user_date ON records(user_id, date);
     CREATE INDEX IF NOT EXISTS idx_personal_expenses_user_id ON personal_expenses(user_id);
@@ -715,6 +891,9 @@ const initSqliteDb = async () => {
   await ensureSqliteColumn('users', 'subscription_activated_at', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'entry_key', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'status_months', 'TEXT');
+  await ensureSqliteColumn('personal_expenses', 'recurrence', 'TEXT');
+  await ensureSqliteColumn('personal_expenses', 'end_month', 'TEXT');
+  await ensureSqliteColumn('personal_expenses', 'notes', 'TEXT');
   await ensureSqliteColumn('personal_sheet_values', 'day_of_month', 'INTEGER');
 
   await query(`
@@ -750,7 +929,10 @@ const initSqliteDb = async () => {
               COALESCE(due_day, -1),
               COALESCE(installments, ''),
               COALESCE(CAST(is_fixed AS TEXT), 'null'),
-              COALESCE(installments_start_month, '')
+              COALESCE(installments_start_month, ''),
+              COALESCE(recurrence, ''),
+              COALESCE(end_month, ''),
+              COALESCE(notes, '')
             ORDER BY id DESC
           ) AS duplicate_rank
         FROM personal_expenses

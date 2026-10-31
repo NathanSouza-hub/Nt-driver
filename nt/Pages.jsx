@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { apiFetch } from "./http";
 import { aggregateRecordsByDate, currency, filterRecordsByMonth, formatDate, getCurrentMonthKey, getMonthLabel, getMonthlyGoalForMonth, getMonthlyStatus, normalizeMonthlyStatusMap, setMonthlyGoalForMonth, summarizeRecords } from "./driver-data";
 import { getProfileTypeLabel, isPessoalProfile } from "./profile-type";
+import { ExpenseCompactList, useExpenseMonth } from "./expenses-shared";
 
 const fieldStyle = {
   width: "100%",
@@ -104,7 +105,7 @@ function normalizePersonalExpenseItem(item = {}) {
   };
 }
 
-function getPersonalExpenseCategoryLabel(category) {
+export function getPersonalExpenseCategoryLabel(category) {
   return personalExpenseCategories.find((item) => item.value === category)?.label || category || "Outros";
 }
 
@@ -409,7 +410,7 @@ function getBaseExpenseStatus(item, statusMonths) {
   return getMonthlyStatus(statusMonths, baseMonth, item.status, baseMonth);
 }
 
-function PageHeader({ title, subtitle, actions, centered = false }) {
+export function PageHeader({ title, subtitle, actions, centered = false }) {
   return (
     <div className={`page-header${centered ? " page-header-center" : ""}`} style={{ justifyContent: "space-between", alignItems: "flex-end" }}>
       <div>
@@ -436,7 +437,7 @@ function MonthFilter({ month, onChange, months }) {
   );
 }
 
-function PageTabs({ tabs, activeTab, onChange }) {
+export function PageTabs({ tabs, activeTab, onChange }) {
   return (
     <div className="page-tabs" role="tablist" aria-label="Abas da página">
       {tabs.map((tab) => (
@@ -452,130 +453,6 @@ function PageTabs({ tabs, activeTab, onChange }) {
         </button>
       ))}
     </div>
-  );
-}
-
-function getExpenseKanbanColumns(month) {
-  const totalWeeks = Math.max(1, Math.ceil(getDaysInMonth(month) / 7));
-  return Array.from({ length: totalWeeks }, (_, index) => {
-    const weekNumber = index + 1;
-    return {
-      key: `week-${weekNumber}`,
-      rangeLabel: getMonthWeekRangeLabel(month, weekNumber),
-    };
-  });
-}
-
-const expenseKanbanStatusColumns = [
-  { key: "pending", label: "Pendentes" },
-  { key: "paid", label: "Pagas" },
-  { key: "overdue", label: "Vencidas" },
-];
-
-function ExpenseKanban({ rows, month, onToggleStatus, onEdit, isSaving }) {
-  const weekOptions = useMemo(() => getExpenseKanbanColumns(month), [month]);
-  const [activeWeek, setActiveWeek] = useState(() => weekOptions[0]?.key || "week-1");
-  const activeWeekNumber = Number(String(activeWeek).replace("week-", "")) || 1;
-
-  useEffect(() => {
-    setActiveWeek((current) => (weekOptions.some((column) => column.key === current) ? current : weekOptions[0]?.key || "week-1"));
-  }, [weekOptions]);
-
-  const columns = useMemo(() => {
-    const grouped = expenseKanbanStatusColumns.reduce((accumulator, column) => {
-      accumulator[column.key] = [];
-      return accumulator;
-    }, {});
-    const today = new Date().toISOString().slice(0, 10);
-
-    rows
-      .filter((item) => getWeekNumberInMonth(getPersonalExpenseDateForMonth(item, month)) === activeWeekNumber)
-      .forEach((item) => {
-        const dueDate = getPersonalExpenseDateForMonth(item, month);
-        const columnKey = item.month_status === "pago" ? "paid" : (dueDate < today ? "overdue" : "pending");
-        grouped[columnKey].push(item);
-      });
-
-    Object.keys(grouped).forEach((key) => {
-      grouped[key].sort((left, right) => {
-        const leftDate = getPersonalExpenseDateForMonth(left, month);
-        const rightDate = getPersonalExpenseDateForMonth(right, month);
-        return leftDate.localeCompare(rightDate) || String(left.description || "").localeCompare(String(right.description || ""));
-      });
-    });
-
-    return grouped;
-  }, [rows, month, activeWeekNumber]);
-
-  return (
-    <>
-      <div className="expenses-kanban-filter">
-        <label htmlFor="expenses-kanban-week">Semana</label>
-        <select id="expenses-kanban-week" value={activeWeek} onChange={(event) => setActiveWeek(event.target.value)}>
-          {weekOptions.map((column) => (
-            <option key={column.key} value={column.key}>
-              {column.rangeLabel}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="expenses-kanban">
-        {expenseKanbanStatusColumns.map((column) => {
-          const columnRows = columns[column.key] || [];
-          const total = columnRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
-          return (
-            <section key={column.key} className={`expenses-kanban-column ${column.key}`}>
-              <div className="expenses-kanban-column-header">
-                <div>
-                  <h2>{column.label}</h2>
-                  <span>{columnRows.length} itens</span>
-                </div>
-                <div className="expenses-kanban-column-summary">
-                  <strong>{currency(total)}</strong>
-                </div>
-              </div>
-
-              <div className="expenses-kanban-list">
-                {columnRows.length ? (
-                  columnRows.map((item) => (
-                    <article key={item.entry_key} className="expenses-kanban-card">
-                      <div className="expenses-kanban-card-top">
-                        <strong>{item.description || "Sem descricao"}</strong>
-                        <span>{currency(item.amount)}</span>
-                      </div>
-                      <div className="expenses-kanban-card-meta">
-                        <span>{getPersonalExpenseCategoryLabel(item.category || "Outros")}</span>
-                        <span>{formatDate(getPersonalExpenseDateForMonth(item, month))}</span>
-                      </div>
-                      <span className={`status-pill ${item.month_status === "pago" ? "paid" : "pending"}`}>
-                        {item.month_status === "pago" ? "Pago" : "Pendente"}
-                      </span>
-                      <div className="expenses-kanban-card-actions">
-                        <button
-                          type="button"
-                          className={item.month_status === "pago" ? "auth-outline-button" : "password-btn"}
-                          disabled={isSaving}
-                          onClick={() => onToggleStatus(item.entry_key)}
-                        >
-                          {item.month_status === "pago" ? "Reabrir" : "Dar baixa"}
-                        </button>
-                        <button type="button" className="auth-outline-button" onClick={() => onEdit(item)}>
-                          Editar
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                ) : (
-                  <p className="expenses-kanban-empty">Nenhuma despesa.</p>
-                )}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-    </>
   );
 }
 
@@ -1385,584 +1262,13 @@ export function SummaryPage() {
   );
 }
 
-export function ExpensesPage() {
-  const { user, expensesMonth } = useOutletContext();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [personalExpenses, setPersonalExpenses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState({ text: "", tone: "success" });
-  const month = expensesMonth || getCurrentMonthKey();
-  const [editingKey, setEditingKey] = useState("");
-  const [form, setForm] = useState({
-    description: "",
-    amount: "",
-    date: new Date().toISOString().slice(0, 10),
-    installments: "",
-    is_fixed: "",
-    category: "",
-    status: "pendente",
-  });
-  const isMotorista = !isPessoalProfile(user?.profileType);
-  const [activeTab, setActiveTab] = useState("list");
-  const expensesTabs = [
-    { key: "list", label: "Lista" },
-    { key: "kanban", label: "Kanban" },
-    { key: "summary", label: "Resumo" },
-  ];
-  const filteredExpenses = useMemo(() => filterPersonalExpensesByMonth(personalExpenses, month), [personalExpenses, month]);
-  const expenseRows = useMemo(
-    () => filteredExpenses
-      .filter((item) => item.type === "saida")
-      .map((item) => ({ ...item, month_status: getPersonalExpenseStatusForMonth(item, month) })),
-    [filteredExpenses, month]
-  );
-  const expenseTotal = useMemo(() => expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenseRows]);
-  const paidTotal = useMemo(
-    () => expenseRows.filter((item) => item.month_status === "pago").reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    [expenseRows]
-  );
-  const pendingTotal = useMemo(
-    () => expenseRows.filter((item) => item.month_status !== "pago").reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    [expenseRows]
-  );
-  const categoryItems = useMemo(() => {
-    const grouped = expenseRows.reduce((accumulator, item) => {
-      const key = item.category || "Outros";
-      accumulator[key] = (accumulator[key] || 0) + Number(item.amount || 0);
-      return accumulator;
-    }, {});
-    return Object.entries(grouped).sort((left, right) => right[1] - left[1]);
-  }, [expenseRows]);
-  const topCategory = categoryItems[0] || null;
-  const summaryCards = [
-    { key: "total", label: "Total do mês", value: currency(expenseTotal), tone: "card-blue" },
-    { key: "paid", label: "Pagas", value: currency(paidTotal), tone: "card-green" },
-    { key: "pending", label: "Pendentes", value: currency(pendingTotal), tone: "card-red" },
-    { key: "category", label: "Maior categoria", value: topCategory ? `${getPersonalExpenseCategoryLabel(topCategory[0])} - ${currency(topCategory[1])}` : "Sem dados", tone: "card-orange" },
-  ];
-  const chartSegments = useMemo(() => {
-    if (!categoryItems.length || expenseTotal <= 0) return [];
-
-    let currentPercent = 0;
-    return categoryItems.map(([label, value], index) => {
-      const percent = Number(((value / expenseTotal) * 100).toFixed(2));
-      const start = currentPercent;
-      currentPercent += percent;
-      return {
-        label,
-        value,
-        color: expensesChartColors[index % expensesChartColors.length],
-        start,
-        end: currentPercent,
-      };
-    });
-  }, [categoryItems, expenseTotal]);
-  const donutBackground = chartSegments.length
-    ? `conic-gradient(${chartSegments.map((segment) => `${segment.color} ${segment.start}% ${segment.end}%`).join(", ")})`
-    : "conic-gradient(var(--panel-soft) 0 100%)";
-
-  const showToast = (text, tone = "success") => {
-    setToast({ text, tone });
-  };
-
-  useEffect(() => {
-    if (!toast.text) return undefined;
-    const timeoutId = window.setTimeout(() => {
-      setToast((current) => (current.text === toast.text ? { text: "", tone: "success" } : current));
-    }, 3200);
-    return () => window.clearTimeout(timeoutId);
-  }, [toast]);
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadPersonalExpenses = async () => {
-      try {
-        setIsLoading(true);
-        const payload = await apiFetch("/api/personal-expenses");
-        if (!isMounted) return;
-        setPersonalExpenses(Array.isArray(payload) ? payload.map(normalizePersonalExpenseItem) : []);
-      } catch (error) {
-        if (isMounted) showToast(error.message, "error");
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    loadPersonalExpenses();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const updateExpenseField = (name, value) => setForm((current) => {
-    if (name === "installments") {
-      const nextInstallments = String(value || "").trim();
-      return {
-        ...current,
-        installments: value,
-        is_fixed: nextInstallments ? "" : current.is_fixed,
-      };
-    }
-
-    return { ...current, [name]: value };
-  });
-
-  const resetExpenseForm = () => {
-    setEditingKey("");
-    setForm({
-      description: "",
-      amount: "",
-      date: new Date().toISOString().slice(0, 10),
-      installments: "",
-      is_fixed: "",
-      category: "",
-      status: "pendente",
-    });
-  };
-
-  const persistExpenses = async (itemsToSave) => {
-    const payload = await apiFetch("/api/personal-expenses/replace", {
-      method: "POST",
-      body: JSON.stringify({ items: itemsToSave }),
-    });
-    const normalized = Array.isArray(payload?.items) ? payload.items.map(normalizePersonalExpenseItem) : [];
-    setPersonalExpenses(normalized);
-    return normalized;
-  };
-
-  const handleExpenseSubmit = async (event) => {
-    event.preventDefault();
-    setToast({ text: "", tone: "success" });
-    setIsSaving(true);
-    try {
-      const existingItem = editingKey ? personalExpenses.find((item) => item.entry_key === editingKey) : null;
-      const normalized = normalizePersonalExpenseItem({
-        entry_key: editingKey || createPersonalExpenseKey(),
-        description: form.description,
-        amount: Number(form.amount) || 0,
-        category: form.category,
-        status: form.status,
-        date: form.date,
-        due_day: Number(String(form.date || "").slice(8, 10)) || 1,
-        installments: form.installments,
-        is_fixed: form.installments ? null : (form.is_fixed === "" ? null : form.is_fixed === "sim"),
-        account: user?.profileType || "outros",
-        status_months: existingItem?.status_months || {},
-      });
-
-      const installmentsValue = String(form.installments || "").trim();
-
-      if (!normalized.description) {
-        throw new Error("Informe a descrição da despesa.");
-      }
-      if (normalized.amount <= 0) {
-        throw new Error("Informe um valor válido para a despesa.");
-      }
-      if (installmentsValue && !parseInstallments(installmentsValue)) {
-        throw new Error("Informe as parcelas no formato atual/total. Ex.: 3/9.");
-      }
-      if (!installmentsValue && form.is_fixed === "") {
-        throw new Error("Informe se a despesa é fixa quando não houver parcelas.");
-      }
-
-      const nextStatusMonths = getUpdatedStatusMonths(normalized, month, form.status);
-      normalized.status_months = nextStatusMonths;
-      normalized.status = getBaseExpenseStatus(normalized, nextStatusMonths);
-
-      const nextItems = editingKey
-        ? personalExpenses.map((item) => (item.entry_key === editingKey ? normalized : item))
-        : [normalized, ...personalExpenses];
-
-      await persistExpenses(nextItems);
-      resetExpenseForm();
-      showToast(editingKey ? "Despesa atualizada." : "Despesa adicionada.");
-    } catch (error) {
-      showToast(error.message, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleEditExpense = (item) => {
-    setEditingKey(item.entry_key);
-    setForm({
-      description: item.description || "",
-      amount: String(item.amount || ""),
-      date: String(item.date || new Date().toISOString().slice(0, 10)).slice(0, 10),
-      installments: item.installments || "",
-      is_fixed: item.installments ? "" : item.is_fixed === true ? "sim" : item.is_fixed === false ? "nao" : "",
-      category: item.category || "Outros",
-      status: getPersonalExpenseStatusForMonth(item, month),
-    });
-    if (isMotorista) setActiveTab("list");
-  };
-
-  const handleDeleteExpense = async (entryKey) => {
-    try {
-      setToast({ text: "", tone: "success" });
-      setIsSaving(true);
-      await persistExpenses(personalExpenses.filter((item) => item.entry_key !== entryKey));
-      if (editingKey === entryKey) resetExpenseForm();
-      showToast("Despesa removida.");
-    } catch (error) {
-      showToast(error.message, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleToggleStatus = async (entryKey) => {
-    try {
-      setToast({ text: "", tone: "success" });
-      setIsSaving(true);
-      await persistExpenses(
-        personalExpenses.map((item) => {
-          if (item.entry_key !== entryKey) return item;
-          const currentStatus = getPersonalExpenseStatusForMonth(item, month);
-          const nextStatus = currentStatus === "pago" ? "pendente" : "pago";
-          const nextStatusMonths = getUpdatedStatusMonths(item, month, nextStatus);
-          return {
-            ...item,
-            status_months: nextStatusMonths,
-            status: getBaseExpenseStatus(item, nextStatusMonths),
-          };
-        })
-      );
-      showToast("Status da despesa atualizado.");
-    } catch (error) {
-      showToast(error.message, "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  useEffect(() => {
-    const editExpenseKey = location.state?.editExpenseKey;
-    if (!editExpenseKey || isLoading) return;
-    const target = personalExpenses.find((item) => item.entry_key === editExpenseKey);
-    if (target) handleEditExpense(target);
-    navigate(location.pathname, { replace: true, state: {} });
-  }, [location.state, isLoading, personalExpenses]);
-
-  return (
-    <>
-      <div
-        className={`app-toast${toast.text ? " visible" : ""}${toast.tone === "error" ? " error" : ""}`}
-        role={toast.tone === "error" ? "alert" : "status"}
-        aria-live="polite"
-      >
-        {toast.text}
-      </div>
-      <PageHeader title="Despesas" centered />
-
-      {isMotorista ? <PageTabs tabs={expensesTabs} activeTab={activeTab} onChange={setActiveTab} /> : null}
-
-      {isMotorista && activeTab === "kanban" ? (
-        <div className="expenses-tab-content">
-          <ExpenseKanban
-            rows={expenseRows}
-            month={month}
-            onToggleStatus={handleToggleStatus}
-            onEdit={handleEditExpense}
-            isSaving={isSaving}
-          />
-        </div>
-      ) : null}
-
-      {isMotorista && activeTab === "summary" ? (
-        <div className="expenses-tab-content">
-          <div className="card">
-            <h2>Despesas por categoria</h2>
-            <div className="admin-users-table-wrap">
-              <table className="personal-table">
-                <thead>
-                  <tr>
-                    <th>Categoria</th>
-                    <th>Total</th>
-                    <th>Participação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categoryItems.length ? (
-                    categoryItems.map(([label, total]) => (
-                      <tr key={label}>
-                        <td>{getPersonalExpenseCategoryLabel(label)}</td>
-                        <td>{currency(total)}</td>
-                        <td>{expenseTotal > 0 ? `${((total / expenseTotal) * 100).toFixed(1)}%` : "0.0%"}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="3" style={{ textAlign: "center" }}>
-                        Nenhuma despesa encontrada.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="card">
-            <h2>Gráfico</h2>
-            {categoryItems.length ? (
-              <div className="expenses-donut-layout">
-                <div className="expenses-donut-card">
-                  <div className="expenses-donut-chart" style={{ background: donutBackground }}>
-                    <div className="expenses-donut-center">
-                      <strong>{currency(expenseTotal)}</strong>
-                      <span>Total</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="expenses-donut-legend">
-                  {chartSegments.map((segment) => (
-                    <div key={segment.label} className="expenses-donut-legend-item">
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span className="expenses-donut-dot" style={{ background: segment.color }} />
-                        <strong>{getPersonalExpenseCategoryLabel(segment.label)}</strong>
-                      </div>
-                      <span>{currency(segment.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <p style={{ margin: 0, color: "var(--muted)" }}>Nenhuma despesa encontrada para exibir o resumo.</p>
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {!isMotorista || activeTab === "list" ? (
-      <div className="expenses-tab-content">
-        {isMotorista ? (
-          <section className="summary-grid dashboard-summary-cards expenses-summary-grid" aria-label="Resumo financeiro">
-            {summaryCards.map((card) => (
-              <div key={card.key} className={`card ${card.tone}`} style={dashboardSummaryCardStyles[card.tone]}>
-                <span style={{ color: "rgba(255,255,255,0.82)" }}>{card.label}</span>
-                <strong>{card.value}</strong>
-              </div>
-            ))}
-          </section>
-        ) : null}
-        <div className="card">
-          <h2>Lista de despesas</h2>
-          <form onSubmit={handleExpenseSubmit} className="admin-users-table-wrap">
-            <table className="personal-table">
-              <thead>
-                  <tr>
-                    <th>Descrição</th>
-                    <th>Valor</th>
-                    <th>Vencimento</th>
-                    <th>Parcelas</th>
-                    <th>Fixo</th>
-                    <th>Categoria</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <input
-                        id="personal-expense-description"
-                        style={fieldStyle}
-                        value={form.description}
-                        onChange={(event) => updateExpenseField("description", event.target.value)}
-                        placeholder="Ex.: Faculdade"
-                        required
-                      />
-                    </td>
-                    <td>
-                      <input
-                        id="personal-expense-amount"
-                        type="number"
-                        step="0.01"
-                        style={fieldStyle}
-                        value={form.amount}
-                        onChange={(event) => updateExpenseField("amount", event.target.value)}
-                        placeholder="0,00"
-                        required
-                      />
-                    </td>
-                    <td>
-                      <input
-                        id="personal-expense-date"
-                        type="date"
-                        style={fieldStyle}
-                        value={form.date}
-                        onChange={(event) => updateExpenseField("date", event.target.value)}
-                        required
-                      />
-                    </td>
-                    <td>
-                      <input
-                        id="personal-expense-installments"
-                        style={fieldStyle}
-                        value={form.installments}
-                        onChange={(event) => updateExpenseField("installments", event.target.value)}
-                        placeholder="1/12"
-                      />
-                    </td>
-                    <td>
-                      <select
-                        id="personal-expense-fixed"
-                        style={fieldStyle}
-                        value={form.is_fixed}
-                        onChange={(event) => updateExpenseField("is_fixed", event.target.value)}
-                        disabled={Boolean(String(form.installments || "").trim())}
-                      >
-                        <option value="">{String(form.installments || "").trim() ? "Parcelado" : "-"}</option>
-                        <option value="sim">Sim</option>
-                        <option value="nao">Não</option>
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        id="personal-expense-category"
-                        list="personal-expense-category-options"
-                        style={fieldStyle}
-                        value={form.category}
-                        onChange={(event) => updateExpenseField("category", event.target.value)}
-                        placeholder="Digite a categoria"
-                      />
-                      <datalist id="personal-expense-category-options">
-                        {personalExpenseCategories.map((category) => (
-                          <option key={category.value} value={category.value}>
-                            {category.label}
-                          </option>
-                        ))}
-                      </datalist>
-                    </td>
-                    <td>
-                      <select
-                        id="personal-expense-status"
-                        style={fieldStyle}
-                        value={form.status}
-                        onChange={(event) => updateExpenseField("status", event.target.value)}
-                      >
-                        {personalExpenseStatuses.map((status) => (
-                          <option key={status.value} value={status.value}>
-                            {status.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button type="submit" className="auth-submit" disabled={isSaving}>
-                          {isSaving ? "Salvando..." : editingKey ? "Salvar" : "Adicionar"}
-                        </button>
-                        {editingKey ? (
-                          <button type="button" className="auth-outline-button" onClick={resetExpenseForm}>
-                            Cancelar
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                  {expenseRows.length ? (
-                    expenseRows.map((record) => (
-                      <tr key={record.entry_key}>
-                        <td>{record.description || "Sem descrição"}</td>
-                        <td>{currency(record.amount)}</td>
-                        <td>{formatDate(getPersonalExpenseDateForMonth(record, month))}</td>
-                        <td>{record.is_fixed === true ? "-" : normalizeInstallmentsForMonth(record, month)}</td>
-                        <td>{record.installments ? "-" : record.is_fixed === true ? "Sim" : record.is_fixed === false ? "Não" : "-"}</td>
-                        <td>{getPersonalExpenseCategoryLabel(record.category || "Outros")}</td>
-                        <td>
-                          <span className={`status-pill ${record.month_status === "pago" ? "paid" : "pending"}`}>
-                            {record.month_status === "pago" ? "Pago" : "Pendente"}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              className="password-btn icon-action-btn"
-                              onClick={() => handleToggleStatus(record.entry_key)}
-                              title={record.month_status === "pago" ? "Marcar como pendente" : "Marcar como pago"}
-                              aria-label={record.month_status === "pago" ? "Marcar como pendente" : "Marcar como pago"}
-                            >
-                              {record.month_status === "pago" ? "↩️" : "✅"}
-                            </button>
-                            <button
-                              type="button"
-                              className="password-btn icon-action-btn"
-                              onClick={() => handleEditExpense(record)}
-                              title="Editar"
-                              aria-label="Editar"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
-                              className="logout-btn icon-action-btn"
-                              onClick={() => handleDeleteExpense(record.entry_key)}
-                              title="Excluir"
-                              aria-label="Excluir"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: "center" }}>
-                        Nenhuma despesa encontrada neste mês.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-            </table>
-          </form>
-        </div>
-      </div>
-      ) : null}
-
-      {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando despesas...</p> : null}
-    </>
-  );
-}
-
 const expensesChartColors = ["#2563eb", "#16a34a", "#d97706", "#dc2626", "#7c3aed", "#0891b2", "#0f766e"];
 
 export function PersonalResumoPage() {
   const { expensesMonth } = useOutletContext();
   const month = expensesMonth || getCurrentMonthKey();
-  const [personalExpenses, setPersonalExpenses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadPersonalExpenses = async () => {
-      try {
-        setIsLoading(true);
-        setLoadError("");
-        const payload = await apiFetch("/api/personal-expenses");
-        if (!isMounted) return;
-        setPersonalExpenses(Array.isArray(payload) ? payload.map(normalizePersonalExpenseItem) : []);
-      } catch (error) {
-        if (isMounted) setLoadError(error.message);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-    loadPersonalExpenses();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const filteredExpenses = useMemo(() => filterPersonalExpensesByMonth(personalExpenses, month), [personalExpenses, month]);
-  const expenseRows = useMemo(() => filteredExpenses.filter((item) => item.type === "saida"), [filteredExpenses]);
+  // Ocorrências do mês calculadas pelo módulo de Despesas (respeita edições individuais, congelamentos e exclusões).
+  const { items: expenseRows, error: loadError, isLoading } = useExpenseMonth(month);
   const expenseTotal = useMemo(() => expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenseRows]);
   const items = useMemo(() => {
     const grouped = expenseRows.reduce((accumulator, item) => {
@@ -2351,7 +1657,6 @@ export function PersonalDashboardPage() {
   const month = expensesMonth || getCurrentMonthKey();
   const [personalEntries, setPersonalEntries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
@@ -2379,13 +1684,8 @@ export function PersonalDashboardPage() {
     () => personalEntries.filter((item) => item.type === "entrada" && String(item.date || "").slice(0, 7) === month),
     [personalEntries, month]
   );
-  const filteredExpenses = useMemo(() => filterPersonalExpensesByMonth(personalEntries, month), [personalEntries, month]);
-  const expenseRows = useMemo(
-    () => filteredExpenses
-      .filter((item) => item.type === "saida")
-      .map((item) => ({ ...item, month_status: getPersonalExpenseStatusForMonth(item, month) })),
-    [filteredExpenses, month]
-  );
+  const { items: expenseRows, isLoading: isLoadingExpenses, error: expensesError, reload: reloadExpenses } = useExpenseMonth(month);
+  const [busyKey, setBusyKey] = useState("");
   const totalReceitas = useMemo(() => receitas.reduce((sum, item) => sum + Number(item.amount || 0), 0), [receitas]);
   const totalDespesas = useMemo(() => expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenseRows]);
   const saldo = totalReceitas - totalDespesas;
@@ -2396,41 +1696,24 @@ export function PersonalDashboardPage() {
     { key: "saldo", label: "Saldo do mês", value: saldo, tone: "card-blue" },
   ];
 
-  const persistEntries = async (itemsToSave) => {
-    const payload = await apiFetch("/api/personal-expenses/replace", {
-      method: "POST",
-      body: JSON.stringify({ items: itemsToSave }),
-    });
-    const normalized = Array.isArray(payload?.items) ? payload.items.map(normalizePersonalExpenseItem) : [];
-    setPersonalEntries(normalized);
-    return normalized;
-  };
-
-  const handleToggleStatus = async (entryKey) => {
+  // Situação alterada somente nesta ocorrência (os outros meses não mudam).
+  const handleToggleStatus = async (item) => {
     try {
-      setIsSaving(true);
-      await persistEntries(
-        personalEntries.map((item) => {
-          if (item.entry_key !== entryKey) return item;
-          const currentStatus = getPersonalExpenseStatusForMonth(item, month);
-          const nextStatus = currentStatus === "pago" ? "pendente" : "pago";
-          const nextStatusMonths = getUpdatedStatusMonths(item, month, nextStatus);
-          return {
-            ...item,
-            status_months: nextStatusMonths,
-            status: getBaseExpenseStatus(item, nextStatusMonths),
-          };
-        })
-      );
+      setBusyKey(item.key);
+      await apiFetch("/api/expenses/occurrence", {
+        method: "PATCH",
+        body: JSON.stringify({ series_key: item.series_key, origin_month: item.origin_month, status: item.status === "pago" ? "pendente" : "pago" }),
+      });
+      await reloadExpenses();
     } catch (error) {
       setLoadError(error.message);
     } finally {
-      setIsSaving(false);
+      setBusyKey("");
     }
   };
 
   const handleEditExpense = (item) => {
-    navigate("/driver/expenses", { state: { editExpenseKey: item.entry_key } });
+    navigate("/driver/expenses", { state: { editOccurrence: item } });
   };
 
   return (
@@ -2446,23 +1729,18 @@ export function PersonalDashboardPage() {
         ))}
       </section>
 
-      {loadError ? <p className="auth-message" style={{ color: "var(--red-soft)" }}>{loadError}</p> : null}
-      {isLoading ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando resumo...</p> : null}
+      {loadError || expensesError ? <p className="auth-message" style={{ color: "var(--red-soft)" }}>{loadError || expensesError}</p> : null}
+      {isLoading || isLoadingExpenses ? <p className="auth-message" style={{ color: "var(--text)" }}>Carregando resumo...</p> : null}
 
-      {!isLoading ? (
-        <>
-          <div className="expenses-tab-content">
-            <h2 style={{ margin: "0 0 12px" }}>Despesas</h2>
-            <ExpenseKanban
-              rows={expenseRows}
-              month={month}
-              onToggleStatus={handleToggleStatus}
-              onEdit={handleEditExpense}
-              isSaving={isSaving}
-            />
-          </div>
-        </>
-      ) : null}
+      <div className="card expense-list-card">
+        <h2 style={{ margin: 0 }}>Despesas</h2>
+        <ExpenseCompactList
+          items={expenseRows}
+          onToggleStatus={handleToggleStatus}
+          onEdit={handleEditExpense}
+          busyKey={busyKey}
+        />
+      </div>
     </>
   );
 }

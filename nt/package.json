@@ -1,0 +1,5 @@
+{
+  "type": "module",
+  "private": true,
+  "description": "Frontend em ES modules (permite que os testes node:test importem as regras de cálculo)."
+}

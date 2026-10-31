@@ -5,8 +5,8 @@ import { ThemeProvider } from "next-themes";
 import DriverLayout from "./driverlayout";
 import Dashboard from "./Dashboard";
 import { isPessoalProfile } from "./profile-type";
+import { ExpensesPage } from "./ExpensesModule";
 import {
-  ExpensesPage,
   HistoryPage,
   NotesPage,
   PerformancePage,

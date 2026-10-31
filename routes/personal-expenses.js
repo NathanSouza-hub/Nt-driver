@@ -67,7 +67,11 @@ const normalizeItem = (item = {}) => {
     due_day: dueDay,
     installments: String(item.installments || '').trim(),
     is_fixed: isFixed,
-    installments_start_month: String(item.installments_start_month || date.slice(0, 7))
+    installments_start_month: String(item.installments_start_month || date.slice(0, 7)),
+    // Colunas da programação (módulo de Despesas). undefined = preservar o valor já salvo.
+    recurrence: item.recurrence === undefined ? undefined : (item.recurrence || null),
+    end_month: item.end_month === undefined ? undefined : (item.end_month || null),
+    notes: item.notes === undefined ? undefined : (item.notes || null)
   };
 };
 
@@ -96,14 +100,24 @@ router.post('/replace', async (req, res) => {
 
   try {
     const rows = await db.withTransaction(async (client) => {
+      // Preserva recorrência/encerramento/observações de clientes antigos que não enviam esses campos.
+      const previous = await client.query('SELECT entry_key, recurrence, end_month, notes FROM personal_expenses WHERE user_id = $1', [userId]);
+      const previousByKey = new Map((previous.rows || []).map((row) => [row.entry_key, row]));
+      items.forEach((item) => {
+        const saved = previousByKey.get(item.entry_key) || {};
+        ['recurrence', 'end_month', 'notes'].forEach((field) => {
+          if (item[field] === undefined) item[field] = saved[field] ?? null;
+        });
+      });
+
       await client.query('DELETE FROM personal_expenses WHERE user_id = $1', [userId]);
 
       for (const item of items) {
         await client.query(
           `INSERT INTO personal_expenses (
             user_id, entry_key, description, amount, type, category, account, status, status_months,
-            date, due_day, installments, is_fixed, installments_start_month
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            date, due_day, installments, is_fixed, installments_start_month, recurrence, end_month, notes
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
           [
             userId,
             item.entry_key,
@@ -118,7 +132,10 @@ router.post('/replace', async (req, res) => {
             item.due_day,
             item.installments,
             item.is_fixed,
-            item.installments_start_month
+            item.installments_start_month,
+            item.recurrence,
+            item.end_month,
+            item.notes
           ]
         );
       }
