@@ -77,7 +77,9 @@ const setNoCacheHeaders = (res) => {
 
 app.use(express.static(frontendPath, {
   setHeaders: (res, filePath) => {
-    if (String(filePath || '').endsWith('index.html')) {
+    // version.json sem cache: é por ele que o app descobre que saiu um deploy novo.
+    const normalizedPath = String(filePath || '');
+    if (normalizedPath.endsWith('index.html') || normalizedPath.endsWith('version.json')) {
       setNoCacheHeaders(res);
     }
   }

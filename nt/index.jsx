@@ -9,6 +9,7 @@ import { ExpensesPage } from "./ExpensesModule";
 import { SummaryPage } from "./GoalsPage";
 import { MonthControlPage } from "./MonthControlPage";
 import { OldDebtsPage } from "./OldDebtsPage";
+import UpdateNotice from "./UpdateNotice";
 import {
   HistoryPage,
   PerformancePage,
@@ -50,6 +51,7 @@ root.render(
         <Route path="*" element={<Navigate to="/driver" replace />} />
       </Routes>
     </BrowserRouter>
+    <UpdateNotice />
     </ThemeProvider>
   </React.StrictMode>
 );
