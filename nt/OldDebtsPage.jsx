@@ -88,32 +88,40 @@ function DebtFormModal({ editing, onClose, onSaved }) {
       footer={(
         <div className="goal-dialog-buttons">
           <button type="button" className="auth-outline-button" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button type="submit" form="debt-form" className="auth-submit" disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar dívida"}</button>
+          <button type="submit" form="debt-form" className="auth-submit auth-submit-blue" disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar dívida"}</button>
         </div>
       )}
     >
-      <form id="debt-form" className="mc-form-grid" onSubmit={submit}>
-        <div className="area-field area-field-wide">
-          <label htmlFor="debt-description">Descrição da dívida</label>
-          <input id="debt-description" maxLength={120} placeholder="Ex.: Faculdade 2023, Empréstimo do banco" style={areaFieldStyle} value={form.description} onChange={(event) => update("description", event.target.value)} required />
+      <form id="debt-form" className="debt-form" onSubmit={submit}>
+        <div className="debt-panel is-blue">
+          <strong className="debt-panel-title">Identificação</strong>
+          <div className="debt-panel-grid">
+            <div className="area-field area-field-wide">
+              <label htmlFor="debt-description">Descrição da dívida</label>
+              <input id="debt-description" maxLength={120} placeholder="Ex.: Faculdade 2023, Empréstimo do banco" style={areaFieldStyle} value={form.description} onChange={(event) => update("description", event.target.value)} required />
+            </div>
+            <div className="area-field">
+              <label htmlFor="debt-category">Categoria</label>
+              <select id="debt-category" style={areaFieldStyle} value={form.category} onChange={(event) => update("category", event.target.value)} required>
+                <option value="">Selecione</option>
+                {DEBT_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
+              </select>
+            </div>
+            <div className="area-field">
+              <label htmlFor="debt-creditor">Empresa ou credor (opcional)</label>
+              <input id="debt-creditor" maxLength={120} placeholder="Ex.: Banco, faculdade, nome da pessoa" style={areaFieldStyle} value={form.creditor} onChange={(event) => update("creditor", event.target.value)} />
+            </div>
+          </div>
+        </div>
+        <div className="debt-panel is-red">
+          <strong className="debt-panel-title">Valor da dívida</strong>
+          <div className="area-field">
+            <label htmlFor="debt-original">Valor original</label>
+            <input id="debt-original" inputMode="decimal" placeholder="0,00" style={areaFieldStyle} value={form.original} onChange={(event) => update("original", event.target.value)} required />
+            {summary && summary.paidCents > 0 ? <small className="mc-hint">Já pago: {formatCents(summary.paidCents)} (mínimo permitido).</small> : null}
+          </div>
         </div>
         <div className="area-field">
-          <label htmlFor="debt-category">Categoria</label>
-          <select id="debt-category" style={areaFieldStyle} value={form.category} onChange={(event) => update("category", event.target.value)} required>
-            <option value="">Selecione</option>
-            {DEBT_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
-          </select>
-        </div>
-        <div className="area-field">
-          <label htmlFor="debt-original">Valor original</label>
-          <input id="debt-original" inputMode="decimal" placeholder="0,00" style={areaFieldStyle} value={form.original} onChange={(event) => update("original", event.target.value)} required />
-          {summary && summary.paidCents > 0 ? <small className="mc-hint">Já pago: {formatCents(summary.paidCents)} (mínimo permitido).</small> : null}
-        </div>
-        <div className="area-field area-field-wide">
-          <label htmlFor="debt-creditor">Empresa ou credor (opcional)</label>
-          <input id="debt-creditor" maxLength={120} placeholder="Ex.: Banco, faculdade, nome da pessoa" style={areaFieldStyle} value={form.creditor} onChange={(event) => update("creditor", event.target.value)} />
-        </div>
-        <div className="area-field area-field-wide">
           <label htmlFor="debt-notes">Observações (opcional)</label>
           <textarea id="debt-notes" rows={3} maxLength={1000} style={{ ...areaFieldStyle, resize: "vertical" }} value={form.notes} onChange={(event) => update("notes", event.target.value)} />
         </div>
@@ -155,8 +163,8 @@ function PaymentForm({ debt, editingPayment, onCancel, onSaved }) {
   };
 
   return (
-    <form className="debt-payment-form" onSubmit={submit}>
-      <strong>{editingPayment ? "Editar pagamento" : "Registrar pagamento"}</strong>
+    <form className="debt-payment-form debt-panel is-green" onSubmit={submit}>
+      <strong className="debt-panel-title">{editingPayment ? "Editar pagamento" : "Registrar pagamento"}</strong>
       <div className="debt-payment-fields">
         <div className="area-field">
           <label htmlFor="payment-amount">Valor pago</label>
@@ -175,7 +183,7 @@ function PaymentForm({ debt, editingPayment, onCancel, onSaved }) {
       {error ? <p className="goal-redistribution-error">{error}</p> : null}
       <div className="goal-dialog-buttons">
         <button type="button" className="auth-outline-button" onClick={onCancel} disabled={saving}>Cancelar</button>
-        <button type="submit" className="auth-submit" disabled={saving}>{saving ? "Salvando..." : "Salvar pagamento"}</button>
+        <button type="submit" className="auth-submit auth-submit-blue" disabled={saving}>{saving ? "Salvando..." : "Salvar pagamento"}</button>
       </div>
     </form>
   );
@@ -215,16 +223,16 @@ function DebtDetailsModal({ debt, onClose, onChanged, showToast }) {
         <div><small>Categoria</small><strong>{getCategoryLabel(debt.category)}</strong></div>
         <div><small>Empresa ou credor</small><strong>{debt.creditor || "-"}</strong></div>
         <div><small>Situação</small><StatusPill status={summary.status} /></div>
-        <div><small>Valor original</small><strong>{formatCents(summary.originalCents)}</strong></div>
-        <div><small>Total já pago</small><strong className="is-paid">{formatCents(summary.paidCents)}</strong></div>
-        <div><small>Saldo restante</small><strong className="is-remaining">{formatCents(summary.remainingCents)}</strong></div>
+        <div className="is-tone-blue"><small>Valor original</small><strong>{formatCents(summary.originalCents)}</strong></div>
+        <div className="is-tone-green"><small>Total já pago</small><strong className="is-paid">{formatCents(summary.paidCents)}</strong></div>
+        <div className="is-tone-amber"><small>Saldo restante</small><strong className="is-remaining">{formatCents(summary.remainingCents)}</strong></div>
       </div>
       {debt.notes ? <p className="debt-notes"><small>Observações</small>{debt.notes}</p> : null}
 
       <div className="debt-payments-head">
         <h3>Histórico de pagamentos</h3>
         {summary.status !== "quitada" && !paymentForm ? (
-          <button type="button" className="auth-submit debt-pay-btn" onClick={() => setPaymentForm({ editing: null })}>+ Registrar pagamento</button>
+          <button type="button" className="auth-submit auth-submit-blue debt-pay-btn" onClick={() => setPaymentForm({ editing: null })}>+ Registrar pagamento</button>
         ) : null}
       </div>
 
@@ -345,14 +353,14 @@ export function OldDebtsPage() {
     <>
       <AreaToast toast={toast} />
       <PageHeader
-        title={<span className="mc-title"><span className="mc-title-icon" aria-hidden="true">📋</span>Dívidas Antigas</span>}
+        title="Dívidas Antigas"
         subtitle="Registro e acompanhamento das minhas pendências financeiras"
         centered
       />
 
       <div className="debt-stats" aria-label="Resumo das dívidas">
         {stats.map((stat) => (
-          <div key={stat.label} className={`card debt-stat ${stat.tone}`}>
+          <div key={stat.label} className={`debt-stat ${stat.tone}`}>
             <small>{stat.label}</small>
             <strong>{stat.value}</strong>
           </div>
@@ -366,8 +374,17 @@ export function OldDebtsPage() {
         </p>
       ) : null}
 
-      <div className="card mc-entries-card">
-        <div className="mc-entries-toolbar">
+      <section className="card debt-shell">
+        <div className="debt-shell-head">
+          <div>
+            <strong>Minhas dívidas</strong>
+            <small>{visible.length === debts.length ? `${debts.length} cadastrada${debts.length === 1 ? "" : "s"}` : `${visible.length} de ${debts.length} exibida${debts.length === 1 ? "" : "s"}`}</small>
+          </div>
+          <button type="button" className="auth-submit auth-submit-blue debt-new-btn" onClick={() => setFormModal({ editing: null })}>+ Nova dívida</button>
+        </div>
+
+        <div className="debt-shell-body">
+        <div className="debt-toolbar">
           <div className="expense-segmented" role="radiogroup" aria-label="Filtrar por situação">
             {STATUS_FILTERS.map((filter) => (
               <button key={filter.key} type="button" role="radio" aria-checked={statusFilter === filter.key} className={statusFilter === filter.key ? "is-active" : ""} onClick={() => setStatusFilter(filter.key)}>
@@ -376,7 +393,6 @@ export function OldDebtsPage() {
             ))}
           </div>
           <input type="search" className="debt-search" style={areaFieldStyle} placeholder="Pesquisar por nome ou empresa" aria-label="Pesquisar dívida" value={search} onChange={(event) => setSearch(event.target.value)} />
-          <button type="button" className="auth-submit mc-new-btn" onClick={() => setFormModal({ editing: null })}>+ Nova dívida</button>
         </div>
 
         {isLoading && !debts.length ? (
@@ -424,7 +440,8 @@ export function OldDebtsPage() {
             {debts.length ? "Nenhuma dívida corresponde ao filtro ou à pesquisa." : "Nenhuma dívida cadastrada. Clique em “+ Nova dívida” para começar."}
           </p>
         )}
-      </div>
+        </div>
+      </section>
 
       {formModal ? (
         <DebtFormModal
