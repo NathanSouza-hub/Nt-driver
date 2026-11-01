@@ -140,16 +140,21 @@ function ExpenseForm({ month, editing, categories, onCategoriesChange, onSaved, 
   const movesMonth = editing && form.due_date && form.due_date.slice(0, 7) !== editing.competence_month;
 
   return (
-    <div className="card area-form-card">
-      <div className="area-form-header">
+    <section className="card nt-shell">
+      <div className="nt-shell-head">
+        <div>
         <strong>{editing ? "Editar lançamento" : "Cadastrar despesa"}</strong>
-        <p>
+        <small>
           {editing
             ? `Alterações valem somente para este lançamento (${getMonthLabel(editing.competence_month)}).`
             : "A situação informada vale para o primeiro lançamento; os próximos nascem a pagar."}
-        </p>
+        </small>
+        </div>
       </div>
-      <form className="area-form-grid expense-form-grid" onSubmit={handleSubmit}>
+      <form className="nt-shell-body nt-form" onSubmit={handleSubmit}>
+        <div className="nt-panel">
+        <strong className="nt-panel-title">Despesa</strong>
+        <div className="nt-panel-grid">
         <div className="area-field area-field-wide">
           <label htmlFor="expense-description">Descrição</label>
           <input id="expense-description" style={areaFieldStyle} maxLength={120} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="Ex.: Conta de luz" required />
@@ -162,6 +167,11 @@ function ExpenseForm({ month, editing, categories, onCategoriesChange, onSaved, 
           <label htmlFor="expense-due">Data de vencimento</label>
           <input id="expense-due" type="date" style={areaFieldStyle} value={form.due_date} onChange={(event) => update("due_date", event.target.value)} required />
         </div>
+        </div>
+        </div>
+        <div className="nt-panel nt-tone-purple">
+        <strong className="nt-panel-title">Classificação</strong>
+        <div className="nt-panel-grid">
         <div className="area-field">
           <label htmlFor="expense-category">Categoria</label>
           {isAddingCategory ? (
@@ -217,6 +227,10 @@ function ExpenseForm({ month, editing, categories, onCategoriesChange, onSaved, 
             </div>
           </>
         ) : null}
+        </div>
+        </div>
+        <div className="nt-panel nt-tone-green">
+        <strong className="nt-panel-title">Pagamento</strong>
         <div className="area-field">
           <label id="expense-status-label">Situação de pagamento</label>
           <div className="expense-segmented" role="radiogroup" aria-labelledby="expense-status-label">
@@ -234,7 +248,8 @@ function ExpenseForm({ month, editing, categories, onCategoriesChange, onSaved, 
             ))}
           </div>
         </div>
-        <div className="area-field area-field-wide">
+        </div>
+        <div className="area-field">
           <label htmlFor="expense-notes">Observações (opcional)</label>
           <textarea id="expense-notes" rows={2} maxLength={500} style={{ ...areaFieldStyle, resize: "vertical" }} value={form.notes} onChange={(event) => update("notes", event.target.value)} />
         </div>
@@ -244,14 +259,14 @@ function ExpenseForm({ month, editing, categories, onCategoriesChange, onSaved, 
             {movesMonth ? ` O lançamento será movido para ${getMonthLabel(form.due_date.slice(0, 7))}.` : ""}
           </p>
         ) : null}
-        <div className="area-form-actions">
-          <button type="submit" className="auth-submit" disabled={isSaving}>
+        <div className="nt-form-actions">
+          <button type="submit" className="auth-submit auth-submit-blue" disabled={isSaving}>
             {isSaving ? "Salvando..." : editing ? "Salvar lançamento" : "Cadastrar despesa"}
           </button>
           {editing ? <button type="button" className="auth-outline-button" onClick={onCancel}>Cancelar</button> : null}
         </div>
       </form>
-    </div>
+    </section>
   );
 }
 
@@ -281,8 +296,9 @@ function ExpenseSummaryTab({ items, total }) {
 
   return (
     <div className="expenses-tab-content">
-      <div className="card">
-        <h2>Despesas por categoria</h2>
+      <section className="card nt-shell">
+        <div className="nt-shell-head"><div><strong>Despesas por categoria</strong><small>Total do mês: {currency(total)}</small></div></div>
+        <div className="nt-shell-body">
         <div className="area-table-wrap">
           <table className="personal-table area-table area-table-compact">
             <thead>
@@ -307,10 +323,12 @@ function ExpenseSummaryTab({ items, total }) {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      </section>
 
-      <div className="card">
-        <h2>Gráfico</h2>
+      <section className="card nt-shell">
+        <div className="nt-shell-head"><div><strong>Gráfico</strong><small>Participação de cada categoria</small></div></div>
+        <div className="nt-shell-body">
         {segments.length ? (
           <div className="expenses-donut-layout">
             <div className="expenses-donut-card">
@@ -336,7 +354,8 @@ function ExpenseSummaryTab({ items, total }) {
         ) : (
           <p style={{ margin: 0, color: "var(--muted)" }}>Nenhuma despesa encontrada para exibir o resumo.</p>
         )}
-      </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -523,22 +542,26 @@ export function ExpensesPage() {
       {error ? <p className="dashboard-source-warning" role="alert">Não foi possível carregar as despesas: {error}</p> : null}
 
       {activeTab === "list" ? (
-        <div className="card expense-list-card">
-          <div className="expense-list-toolbar">
+        <>
+        <div className="nt-stats" aria-label="Totais do mês">
+          <div className="nt-stat"><small>Total do mês</small><strong>{currency(summary.total)}</strong></div>
+          <div className="nt-stat nt-tone-green"><small>Pagas</small><strong>{currency(summary.paid)}</strong></div>
+          <div className="nt-stat nt-tone-amber"><small>A pagar</small><strong>{currency(summary.pending)}</strong></div>
+          <div className="nt-stat nt-tone-red"><small>Atrasadas</small><strong>{currency(overdueTotal)}</strong></div>
+        </div>
+
+        <section className="card nt-shell">
+          <div className="nt-shell-head">
             <div className="tiktok-month-nav" aria-label="Navegação entre meses">
               <button type="button" className="tiktok-month-btn" onClick={() => setExpensesMonth(shiftMonth(month, -1))} aria-label="Mês anterior">‹</button>
               <strong className="tiktok-month-label">{getMonthLabel(month)}</strong>
               <button type="button" className="tiktok-month-btn" onClick={() => setExpensesMonth(shiftMonth(month, 1))} aria-label="Próximo mês">›</button>
             </div>
-            <div className="expense-totals" aria-label="Totais do mês">
-              <div><small>Total</small><strong>{currency(summary.total)}</strong></div>
-              <div className="is-paid"><small>Pagas</small><strong>{currency(summary.paid)}</strong></div>
-              <div className="is-pending"><small>A pagar</small><strong>{currency(summary.pending)}</strong></div>
-              {overdueTotal > 0 ? <div className="is-overdue"><small>Atrasadas</small><strong>{currency(overdueTotal)}</strong></div> : null}
-            </div>
+            <button type="button" className="auth-submit auth-submit-blue nt-shell-btn" onClick={() => { setEditing(null); setActiveTab("create"); }}>+ Cadastrar</button>
           </div>
 
-          <div className="expense-filters">
+          <div className="nt-shell-body">
+          <div className="nt-toolbar expense-filters">
             <div className="expense-segmented" role="radiogroup" aria-label="Filtrar por situação">
               {STATUS_FILTERS.map((filter) => (
                 <button
@@ -560,7 +583,6 @@ export function ExpensesPage() {
               ))}
             </select>
             <input style={areaFieldStyle} className="expense-filter-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descrição" aria-label="Buscar despesa" />
-            <button type="button" className="auth-submit expense-new-btn" onClick={() => { setEditing(null); setActiveTab("create"); }}>+ Cadastrar</button>
           </div>
 
           {isLoading && !items.length ? (
@@ -581,7 +603,9 @@ export function ExpensesPage() {
               Exibindo {filteredItems.length} de {items.length} · {currency(filteredItems.reduce((sum, item) => sum + item.amount, 0))}
             </p>
           ) : null}
-        </div>
+          </div>
+        </section>
+        </>
       ) : null}
 
       {activeTab === "create" ? (
