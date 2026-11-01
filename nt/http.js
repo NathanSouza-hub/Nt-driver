@@ -27,6 +27,10 @@ export async function apiFetch(url, options = {}) {
     const requestError = new Error(message);
     requestError.status = response.status;
     requestError.payload = payload;
+    // Conta bloqueada pelo administrador: o servidor já encerrou a sessão; o layout volta ao login.
+    if (response.status === 401 && payload && payload.code === "account_blocked" && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("nt:account-blocked", { detail: { message } }));
+    }
     throw requestError;
   }
 

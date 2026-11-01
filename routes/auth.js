@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../models/db');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireAdmin, isUserBlocked, BLOCKED_MESSAGE } = require('../middleware/auth');
 const { isSubscriptionActive } = require('../utils/subscription');
 const { buildPixPayload, buildPixQrDataUrl } = require('../utils/pix');
 
@@ -273,7 +273,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await db.get(
-      `SELECT id, name, email, password_hash, is_admin, profile_type, email_verified_at, email_verification_required,
+      `SELECT id, name, email, password_hash, is_admin, is_blocked, profile_type, email_verified_at, email_verification_required,
         subscription_status, subscription_trial_ends_at
        FROM users WHERE email = $1`,
       [normalizedEmail]
@@ -286,6 +286,11 @@ router.post('/login', async (req, res) => {
     const isValid = await bcrypt.compare(rawPassword, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Email ou senha inválidos.' });
+    }
+
+    // Bloqueio vale mesmo com assinatura ativa. Só informado após a senha correta.
+    if (isUserBlocked(user)) {
+      return res.status(403).json({ error: BLOCKED_MESSAGE, code: 'account_blocked' });
     }
 
     // Verificação de email desativada
@@ -532,12 +537,14 @@ router.post('/reset-password', async (req, res) => {
 router.get('/users', requireAdmin, async (req, res) => {
   try {
     const rows = await db.all(
-      `SELECT id, name, email, is_admin, profile_type, created_at, last_login_at,
+      `SELECT id, name, email, is_admin, is_blocked, blocked_at, profile_type, created_at, last_login_at,
         subscription_status, subscription_trial_ends_at, subscription_activated_at
        FROM users ORDER BY id ASC`
     );
     return res.json((rows || []).map((row) => ({
       ...row,
+      is_admin: Boolean(row.is_admin),
+      is_blocked: isUserBlocked(row),
       profile_type: serializeProfileType(row.profile_type),
       subscription_active: isSubscriptionActive(row)
     })));
@@ -609,10 +616,92 @@ router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
   }
 });
 
-router.delete('/users/:id', requireAdmin, async (req, res) => {
-  const userId = Number(req.params.id);
+// Tabelas com dados do usuário (coluna user_id), na ordem segura de exclusão (filhas antes das mães).
+// Cada linha pertence só ao próprio usuário: nada de outros usuários é apagado.
+const USER_DATA_TABLES = [
+  { table: 'old_debt_payments', label: 'Pagamentos de dívidas antigas', financial: true },
+  { table: 'old_debts', label: 'Dívidas antigas', financial: true },
+  { table: 'tiktok_sales', label: 'Vendas TikTok', financial: true },
+  { table: 'tiktok_expenses', label: 'Despesas TikTok', financial: true },
+  { table: 'tiktok_sellers', label: 'Vendedores TikTok', financial: false },
+  { table: 'personal_sheet_values', label: 'Valores da planilha pessoal', financial: true },
+  { table: 'personal_sheet_rows', label: 'Linhas da planilha pessoal', financial: false },
+  { table: 'expense_occurrences', label: 'Ocorrências de despesas', financial: true },
+  { table: 'personal_expenses', label: 'Despesas', financial: true },
+  { table: 'expense_categories', label: 'Categorias de despesas', financial: false },
+  { table: 'goal_redistributions', label: 'Redistribuições de metas', financial: false },
+  { table: 'summary_daily_goals', label: 'Metas diárias', financial: false },
+  { table: 'summary_monthly_goals', label: 'Metas mensais', financial: false },
+  { table: 'month_control_entries', label: 'Lançamentos do Controle do Mês', financial: true },
+  { table: 'salary_receipts', label: 'Recebimentos de salário', financial: true },
+  { table: 'records', label: 'Registros diários (Uber)', financial: true },
+  { table: 'admin_note_documents', label: 'Notas', financial: false },
+  { table: 'admin_notes', label: 'Bloco de notas (legado)', financial: false },
+  { table: 'password_reset_tokens', label: null, financial: false },
+  { table: 'email_verification_tokens', label: null, financial: false }
+];
 
-  if (!Number.isFinite(userId) || userId <= 0) {
+const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
+
+// Postgres (pg.PoolClient) não tem .get(); usar sempre .query().rows, que funciona nos dois bancos.
+const queryOne = async (executor, sql, params = []) => (await executor.query(sql, params)).rows?.[0] || null;
+
+const listExistingTables = async (executor) => {
+  const sql = db.isPostgres
+    ? 'SELECT table_name AS name FROM information_schema.tables WHERE table_schema = current_schema()'
+    : "SELECT name FROM sqlite_master WHERE type = 'table'";
+  const result = await executor.query(sql);
+  return new Set((result.rows || []).map((row) => row.name));
+};
+
+const countUserData = async (executor, userId) => {
+  const existing = await listExistingTables(executor);
+  const counts = [];
+  for (const item of USER_DATA_TABLES) {
+    if (!existing.has(item.table)) continue;
+    const row = await queryOne(executor, `SELECT COUNT(*) AS count FROM ${item.table} WHERE user_id = $1`, [userId]);
+    counts.push({ ...item, count: Number(row?.count || 0) });
+  }
+  return counts;
+};
+
+const parseTargetUserId = (req) => {
+  const userId = Number(req.params.id);
+  return Number.isInteger(userId) && userId > 0 ? userId : null;
+};
+
+const countActiveAdmins = async (executor, exceptUserId) => {
+  const row = await queryOne(
+    executor,
+    'SELECT COUNT(*) AS count FROM users WHERE is_admin = TRUE AND is_blocked = FALSE AND id <> $1',
+    [exceptUserId]
+  );
+  return Number(row?.count || 0);
+};
+
+// Resumo exibido na confirmação: o que será apagado junto com a conta.
+router.get('/users/:id/delete-summary', requireAdmin, async (req, res) => {
+  const userId = parseTargetUserId(req);
+  if (!userId) return res.status(400).json({ error: 'Usuário inválido.' });
+
+  try {
+    const user = await queryOne(db, 'SELECT id, name, email FROM users WHERE id = $1', [userId]);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    const counts = await countUserData(db, userId);
+    return res.json({
+      user,
+      items: counts.filter((item) => item.label && item.count > 0).map(({ label, count, financial }) => ({ label, count, financial }))
+    });
+  } catch (error) {
+    console.error('[users] Falha ao levantar dados do usuário:', error.message);
+    return res.status(500).json({ error: 'Não foi possível verificar os dados deste usuário.' });
+  }
+});
+
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  const userId = parseTargetUserId(req);
+
+  if (!userId) {
     return res.status(400).json({ error: 'Usuário inválido.' });
   }
 
@@ -622,19 +711,21 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
 
   try {
     await db.withTransaction(async (client) => {
-      const targetUser = await client.get('SELECT id, is_admin FROM users WHERE id = $1', [userId]);
+      const targetUser = await queryOne(client, 'SELECT id, is_admin FROM users WHERE id = $1', [userId]);
       if (!targetUser) {
-        const error = new Error('Usuário não encontrado.');
-        error.statusCode = 404;
-        throw error;
+        throw httpError(404, 'Usuário não encontrado.');
       }
 
-      if (targetUser.is_admin) {
-        const adminCount = await client.get('SELECT COUNT(*)::int AS count FROM users WHERE is_admin = TRUE');
-        if (Number(adminCount?.count || 0) <= 1) {
-          const error = new Error('Não é permitido excluir o último administrador.');
-          error.statusCode = 400;
-          throw error;
+      if (targetUser.is_admin && (await countActiveAdmins(client, userId)) < 1) {
+        throw httpError(400, 'Não é permitido excluir o último administrador.');
+      }
+
+      // Remove explicitamente os dados do próprio usuário antes da conta, para não depender
+      // de ON DELETE CASCADE (tabelas antigas em produção podem ter sido criadas sem ele).
+      const existing = await listExistingTables(client);
+      for (const item of USER_DATA_TABLES) {
+        if (existing.has(item.table)) {
+          await client.query(`DELETE FROM ${item.table} WHERE user_id = $1`, [userId]);
         }
       }
 
@@ -646,9 +737,47 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     if (error?.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
     }
-    return res.status(500).json({ error: 'Falha ao excluir usuário.' });
+    console.error('[users] Falha ao excluir usuário:', error.code || '', error.message);
+    if (error?.code === '23503' || /FOREIGN KEY/i.test(error?.message || '')) {
+      return res.status(409).json({
+        error: `Não foi possível excluir: ainda existem registros vinculados a este usuário${error.table ? ` (tabela ${error.table})` : ''}. Nada foi apagado. Se quiser apenas impedir o acesso, use Bloquear.`
+      });
+    }
+    return res.status(500).json({ error: 'Não foi possível excluir o usuário. Nada foi apagado; tente novamente.' });
   }
 });
+
+const setUserBlocked = (blocked) => async (req, res) => {
+  const userId = parseTargetUserId(req);
+  if (!userId) return res.status(400).json({ error: 'Usuário inválido.' });
+
+  if (blocked && Number(req.session.userId) === userId) {
+    return res.status(400).json({ error: 'Você não pode bloquear sua própria conta.' });
+  }
+
+  try {
+    const target = await queryOne(db, 'SELECT id, is_admin, is_blocked FROM users WHERE id = $1', [userId]);
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    if (blocked && target.is_admin && (await countActiveAdmins(db, userId)) < 1) {
+      return res.status(400).json({ error: 'Não é permitido bloquear o último administrador ativo.' });
+    }
+
+    // Só altera o status de bloqueio: assinatura, perfil e dados ficam intactos.
+    if (blocked) {
+      await db.query('UPDATE users SET is_blocked = TRUE, blocked_at = NOW() WHERE id = $1', [userId]);
+    } else {
+      await db.query('UPDATE users SET is_blocked = FALSE, blocked_at = NULL WHERE id = $1', [userId]);
+    }
+    return res.json({ ok: true, is_blocked: blocked });
+  } catch (error) {
+    console.error('[users] Falha ao alterar bloqueio:', error.message);
+    return res.status(500).json({ error: blocked ? 'Não foi possível bloquear o usuário.' : 'Não foi possível desbloquear o usuário.' });
+  }
+};
+
+router.post('/users/:id/block', requireAdmin, setUserBlocked(true));
+router.post('/users/:id/unblock', requireAdmin, setUserBlocked(false));
 
 router.post('/users/:id/activate-subscription', requireAdmin, async (req, res) => {
   const userId = Number(req.params.id);

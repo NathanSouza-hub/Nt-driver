@@ -303,6 +303,9 @@ const initPostgresDb = async () => {
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_trial_ends_at TIMESTAMPTZ');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_activated_at TIMESTAMPTZ');
+  // Bloqueio administrativo: impede login e acesso às APIs sem apagar dados.
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN NOT NULL DEFAULT FALSE');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMPTZ');
   await query(`
     UPDATE users
     SET subscription_status = 'active', subscription_activated_at = NOW()
@@ -1036,6 +1039,8 @@ const initSqliteDb = async () => {
   await ensureSqliteColumn('users', 'subscription_status', 'TEXT');
   await ensureSqliteColumn('users', 'subscription_trial_ends_at', 'TEXT');
   await ensureSqliteColumn('users', 'subscription_activated_at', 'TEXT');
+  await ensureSqliteColumn('users', 'is_blocked', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureSqliteColumn('users', 'blocked_at', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'entry_key', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'status_months', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'recurrence', 'TEXT');

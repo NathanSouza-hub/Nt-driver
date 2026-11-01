@@ -122,6 +122,17 @@ export default function DriverLayout() {
     refreshSession();
   }, [loadRegisterStatus, refreshSession]);
 
+  // Bloqueio aplicado durante o uso: o servidor encerrou a sessão, então volta para a tela de login.
+  useEffect(() => {
+    const onBlocked = () => {
+      setUser(null);
+      setRecords([]);
+      setAuthChecked(true);
+    };
+    window.addEventListener("nt:account-blocked", onBlocked);
+    return () => window.removeEventListener("nt:account-blocked", onBlocked);
+  }, []);
+
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth > 1000) {

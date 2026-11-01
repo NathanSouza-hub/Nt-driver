@@ -6234,3 +6234,57 @@ select {
     font-size: 1.1rem;
   }
 }
+
+/* ===== Usuários: status, bloqueio e confirmação de exclusão ===== */
+.admin-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-user-actions .auth-outline-button,
+.admin-user-actions .logout-btn {
+  width: auto;
+  min-height: 0;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.admin-self-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.personal-table tr.admin-user-blocked td {
+  color: var(--muted);
+}
+
+.personal-table tr.admin-user-blocked td .status-pill {
+  color: var(--red-soft);
+}
+
+.admin-users-message.is-success {
+  color: var(--green-soft);
+}
+
+.admin-users-message.is-error {
+  color: var(--red-soft);
+}
+
+.admin-delete-list {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-delete-warning {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--amber-soft);
+}

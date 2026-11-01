@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { apiFetch } from "./http";
 import { aggregateRecordsByDate, currency, filterRecordsByMonth, formatDate, getCurrentMonthKey, getMonthLabel, getMonthlyStatus, normalizeMonthlyStatusMap, summarizeRecords } from "./driver-data";
 import { getProfileTypeLabel, isPessoalProfile } from "./profile-type";
-import { ExpenseCompactList, useExpenseMonth } from "./expenses-shared";
+import { ConfirmDialog, ExpenseCompactList, useExpenseMonth } from "./expenses-shared";
 
 const fieldStyle = {
   width: "100%",
@@ -130,6 +130,13 @@ function getSubscriptionLabel(row) {
   if (row.subscription_status === "pending_review") return "Aguardando confirmação";
   if (row.subscription_status === "trial") return "Teste expirado";
   return "Pendente";
+}
+
+// Status da conta na página Usuários: bloqueio tem prioridade sobre a assinatura.
+function getUserStatus(row) {
+  if (row.is_blocked) return { label: "Bloqueado", tone: "overdue" };
+  if (row.subscription_active) return { label: "Ativo", tone: "paid" };
+  return { label: "Assinatura expirada", tone: "pending" };
 }
 
 function escapeHtml(value) {
@@ -1677,14 +1684,86 @@ export function UsersPage() {
     }
   };
 
-  const deleteUser = async (id) => {
+  const [confirm, setConfirm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [messageTone, setMessageTone] = useState("info");
+
+  const notify = (text, tone = "success") => {
+    setMessage(text);
+    setMessageTone(tone);
+  };
+
+  // Executa a ação confirmada, recarrega a lista e mostra sucesso/erro.
+  const runConfirmed = async (request, successText) => {
+    setBusy(true);
     try {
-      setMessage("");
-      await apiFetch(`/api/auth/users/${id}`, { method: "DELETE" });
+      await request();
+      setConfirm(null);
       await loadUsers();
+      notify(successText, "success");
     } catch (error) {
-      setMessage(error.message);
+      setConfirm(null);
+      notify(error.message, "error");
+    } finally {
+      setBusy(false);
     }
+  };
+
+  const askDelete = async (row) => {
+    setMessage("");
+    let items = [];
+    try {
+      const summary = await apiFetch(`/api/auth/users/${row.id}/delete-summary`);
+      items = summary?.items || [];
+    } catch (error) {
+      notify(error.message, "error");
+      return;
+    }
+    const hasFinancial = items.some((item) => item.financial);
+    setConfirm({
+      title: "Excluir usuário",
+      message: (
+        <>
+          <p>Excluir definitivamente a conta de <strong>{row.name}</strong> ({row.email})?</p>
+          {items.length ? (
+            <>
+              <p>Os dados desta conta também serão apagados (somente deste usuário):</p>
+              <ul className="admin-delete-list">
+                {items.map((item) => <li key={item.label}>{item.label}: <strong>{item.count}</strong></li>)}
+              </ul>
+              {hasFinancial ? <p className="admin-delete-warning">Inclui histórico financeiro. Para impedir o acesso sem perder nada, use <strong>Bloquear</strong>.</p> : null}
+            </>
+          ) : <p>Esta conta não tem registros vinculados.</p>}
+          <p>Esta ação não pode ser desfeita.</p>
+        </>
+      ),
+      actions: [{
+        label: "Excluir definitivamente",
+        tone: "danger",
+        onClick: () => runConfirmed(() => apiFetch(`/api/auth/users/${row.id}`, { method: "DELETE" }), `Usuário ${row.name} excluído.`),
+      }],
+    });
+  };
+
+  const askBlock = (row) => {
+    setMessage("");
+    const blocking = !row.is_blocked;
+    setConfirm({
+      title: blocking ? "Bloquear usuário" : "Desbloquear usuário",
+      message: blocking ? (
+        <p>Bloquear <strong>{row.name}</strong>? A pessoa não conseguirá entrar nem usar o sistema, mesmo com a assinatura ativa. Nenhum dado será apagado e você pode desbloquear depois.</p>
+      ) : (
+        <p>Desbloquear <strong>{row.name}</strong>? O login volta a funcionar. A assinatura e os dados continuam como estão.</p>
+      ),
+      actions: [{
+        label: blocking ? "Bloquear" : "Desbloquear",
+        tone: blocking ? "danger" : undefined,
+        onClick: () => runConfirmed(
+          () => apiFetch(`/api/auth/users/${row.id}/${blocking ? "block" : "unblock"}`, { method: "POST" }),
+          blocking ? `Usuário ${row.name} bloqueado.` : `Usuário ${row.name} desbloqueado.`,
+        ),
+      }],
+    });
   };
 
   const activateSubscription = async (id) => {
@@ -1692,9 +1771,9 @@ export function UsersPage() {
       setMessage("");
       await apiFetch(`/api/auth/users/${id}/activate-subscription`, { method: "POST" });
       await loadUsers();
-      setMessage("Acesso liberado.");
+      notify("Acesso liberado.");
     } catch (error) {
-      setMessage(error.message);
+      notify(error.message, "error");
     }
   };
 
@@ -1728,39 +1807,53 @@ export function UsersPage() {
                 <th>Email</th>
                 <th>Perfil</th>
                 <th>Assinatura</th>
+                <th>Status</th>
                 <th>Visto por último</th>
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.name}</td>
-                  <td>{row.email}</td>
-                  <td>{getProfileTypeLabel(row.profile_type)}</td>
-                  <td>{getSubscriptionLabel(row)}</td>
-                  <td>{formatLastSeenLabel(row.last_login_at)}</td>
-                  <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {!row.subscription_active ? (
-                      <button type="button" className="auth-outline-button" onClick={() => activateSubscription(row.id)}>
-                        Liberar acesso
-                      </button>
-                    ) : null}
-                    {Number(row.id) === Number(user?.id) ? (
-                      <span>Sua conta</span>
-                    ) : (
-                      <button type="button" className="logout-btn" onClick={() => deleteUser(row.id)}>
-                        Excluir
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {users.map((row) => {
+                const status = getUserStatus(row);
+                const isSelf = Number(row.id) === Number(user?.id);
+                return (
+                  <tr key={row.id} className={row.is_blocked ? "admin-user-blocked" : ""}>
+                    <td>{row.name}</td>
+                    <td>{row.email}</td>
+                    <td>{getProfileTypeLabel(row.profile_type)}</td>
+                    <td>{getSubscriptionLabel(row)}</td>
+                    <td><small className={`status-pill ${status.tone}`}>{status.label}</small></td>
+                    <td>{formatLastSeenLabel(row.last_login_at)}</td>
+                    <td>
+                      <div className="admin-user-actions">
+                        {!row.subscription_active && !row.is_blocked ? (
+                          <button type="button" className="auth-outline-button" onClick={() => activateSubscription(row.id)}>
+                            Liberar acesso
+                          </button>
+                        ) : null}
+                        {isSelf ? (
+                          <small className="admin-self-label">Sua conta</small>
+                        ) : (
+                          <>
+                            <button type="button" className="auth-outline-button" onClick={() => askBlock(row)}>
+                              {row.is_blocked ? "Desbloquear" : "Bloquear"}
+                            </button>
+                            <button type="button" className="logout-btn" onClick={() => askDelete(row)}>
+                              Excluir
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-        {message ? <p className="auth-message">{message}</p> : null}
+        {message ? <p className={`auth-message admin-users-message is-${messageTone}`} role="status">{message}</p> : null}
       </div>
+      {confirm ? <ConfirmDialog {...confirm} busy={busy} onClose={() => setConfirm(null)} /> : null}
     </>
   );
 }
