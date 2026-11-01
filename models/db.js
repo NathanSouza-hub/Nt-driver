@@ -627,6 +627,33 @@ const initPostgresDb = async () => {
     )
   `);
   await query('CREATE INDEX IF NOT EXISTS idx_month_control_entries_user_month ON month_control_entries(user_id, year_month)');
+  // Lançamentos divididos: is_split marca o lançamento; partes e pagamentos ficam em tabelas próprias.
+  // Só acrescenta estruturas — lançamentos antigos continuam como "sem divisão".
+  await query('ALTER TABLE month_control_entries ADD COLUMN IF NOT EXISTS is_split BOOLEAN NOT NULL DEFAULT FALSE');
+  await query(`
+    CREATE TABLE IF NOT EXISTS month_control_shares (
+      id BIGSERIAL PRIMARY KEY,
+      entry_id BIGINT NOT NULL REFERENCES month_control_entries(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      participant TEXT NOT NULL CHECK (participant IN ('nathan', 'mauricio', 'lene', 'isaque')),
+      share_cents INTEGER NOT NULL CHECK (share_cents >= 0),
+      UNIQUE (entry_id, participant)
+    )
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS month_control_share_payments (
+      id BIGSERIAL PRIMARY KEY,
+      entry_id BIGINT NOT NULL REFERENCES month_control_entries(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      participant TEXT NOT NULL CHECK (participant IN ('nathan', 'mauricio', 'lene', 'isaque')),
+      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+      paid_on TEXT NOT NULL,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_month_control_shares_entry ON month_control_shares(entry_id)');
+  await query('CREATE INDEX IF NOT EXISTS idx_month_control_share_payments_entry ON month_control_share_payments(entry_id)');
 
   // Dívidas Antigas: dívidas e histórico de pagamentos (centavos inteiros). Módulo independente.
   await query(`
@@ -935,6 +962,29 @@ const initSqliteDb = async () => {
 
     CREATE INDEX IF NOT EXISTS idx_month_control_entries_user_month ON month_control_entries(user_id, year_month);
 
+    CREATE TABLE IF NOT EXISTS month_control_shares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_id INTEGER NOT NULL REFERENCES month_control_entries(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      participant TEXT NOT NULL CHECK (participant IN ('nathan', 'mauricio', 'lene', 'isaque')),
+      share_cents INTEGER NOT NULL CHECK (share_cents >= 0),
+      UNIQUE (entry_id, participant)
+    );
+
+    CREATE TABLE IF NOT EXISTS month_control_share_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_id INTEGER NOT NULL REFERENCES month_control_entries(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      participant TEXT NOT NULL CHECK (participant IN ('nathan', 'mauricio', 'lene', 'isaque')),
+      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+      paid_on TEXT NOT NULL,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_month_control_shares_entry ON month_control_shares(entry_id);
+    CREATE INDEX IF NOT EXISTS idx_month_control_share_payments_entry ON month_control_share_payments(entry_id);
+
     CREATE TABLE IF NOT EXISTS old_debts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -1041,6 +1091,7 @@ const initSqliteDb = async () => {
   await ensureSqliteColumn('users', 'subscription_activated_at', 'TEXT');
   await ensureSqliteColumn('users', 'is_blocked', 'INTEGER NOT NULL DEFAULT 0');
   await ensureSqliteColumn('users', 'blocked_at', 'TEXT');
+  await ensureSqliteColumn('month_control_entries', 'is_split', 'INTEGER NOT NULL DEFAULT 0');
   await ensureSqliteColumn('personal_expenses', 'entry_key', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'status_months', 'TEXT');
   await ensureSqliteColumn('personal_expenses', 'recurrence', 'TEXT');

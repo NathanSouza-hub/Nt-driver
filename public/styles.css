@@ -6767,3 +6767,187 @@ select {
     font-size: 1.15rem;
   }
 }
+
+/* Controle do Mês — lançamentos divididos entre pessoas (classes mc-split-*) */
+.mc-split-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.mc-split-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.mc-split-switch-track {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.mc-split-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.mc-split-switch input:checked + .mc-split-switch-track {
+  background: var(--blue);
+}
+
+.mc-split-switch input:checked + .mc-split-switch-track::after {
+  transform: translateX(18px);
+}
+
+.mc-split-switch input:focus-visible + .mc-split-switch-track {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
+}
+
+.mc-split-chip-text {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  line-height: 1.15;
+}
+
+.mc-split-chip-text small {
+  color: var(--blue-soft);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+}
+
+.mc-split-payer {
+  gap: 8px;
+}
+
+.mc-split-avatars {
+  display: inline-flex;
+}
+
+.mc-split-avatars .tiktok-avatar + .tiktok-avatar {
+  margin-left: -7px;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.status-pill.mc-partial-pill {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--blue-soft);
+}
+
+.mc-split-modal {
+  display: grid;
+  gap: 14px;
+}
+
+/* Tabelas de partes (janela e fechamento): cabem sem rolagem lateral */
+.mc-split-modal .personal-table.mc-table,
+.mc-split-closing .personal-table.mc-table {
+  min-width: 0;
+}
+
+.mc-split-modal .mc-table th,
+.mc-split-modal .mc-table td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.mc-split-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.mc-split-head span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.mc-split-head strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-split-head .status-pill,
+.mc-split-modal td .status-pill {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mc-pay-share-btn {
+  margin-left: 8px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.mc-split-history {
+  display: grid;
+  gap: 8px;
+}
+
+.mc-split-payment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mc-split-payment-actions .auth-outline-button,
+.mc-split-payment-actions .logout-btn:not(.icon-action-btn) {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.mc-shares-diff {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
+}
+
+.mc-split-closing .mc-creditors-pending {
+  margin: 12px 0 4px;
+  font-weight: 600;
+}
+
+.mc-split-closing .mc-creditors-pending strong {
+  color: var(--amber-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  .mc-split-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mc-pay-share-btn {
+    margin: 6px 0 0;
+  }
+}

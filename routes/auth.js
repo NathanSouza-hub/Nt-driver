@@ -632,6 +632,8 @@ const USER_DATA_TABLES = [
   { table: 'goal_redistributions', label: 'Redistribuições de metas', financial: false },
   { table: 'summary_daily_goals', label: 'Metas diárias', financial: false },
   { table: 'summary_monthly_goals', label: 'Metas mensais', financial: false },
+  { table: 'month_control_share_payments', label: 'Pagamentos de partes do Controle do Mês', financial: true },
+  { table: 'month_control_shares', label: 'Partes de lançamentos divididos', financial: true },
   { table: 'month_control_entries', label: 'Lançamentos do Controle do Mês', financial: true },
   { table: 'salary_receipts', label: 'Recebimentos de salário', financial: true },
   { table: 'records', label: 'Registros diários (Uber)', financial: true },
