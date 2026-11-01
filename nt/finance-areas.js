@@ -1,7 +1,7 @@
 // Regras financeiras das abas Dashboard | Uber | Salário | TikTok.
 //
 // Integração com o Dashboard (obrigatória):
-//   Receitas gerais = Uber (registros diários) + Salário + TikTok (planilha de vendas)
+//   Receitas gerais = saldo da Uber (receitas − gastos dos registros diários) + Salário + TikTok (planilha de vendas)
 //   Despesas gerais = somente a página geral de Despesas (personal_expenses do tipo "saida")
 // Despesas do Uber e do TikTok ficam apenas nas respectivas abas.
 

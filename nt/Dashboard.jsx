@@ -163,9 +163,9 @@ function DueReminderCard({ reminderItems, reminderError }) {
   );
 }
 
-// Aba Dashboard: visão geral. Receitas = Uber + Salário + TikTok. Despesas = somente a página geral de Despesas.
-function OverviewTab({ reminderItems, reminderError, uberIncome, salaryIncome, tiktokIncome, generalExpenseRows, sourceWarning }) {
-  const totalIncome = roundMoney(uberIncome + salaryIncome + tiktokIncome);
+// Aba Dashboard: visão geral. Receitas = saldo da Uber (receitas − gastos) + Salário + TikTok. Despesas = somente a página geral de Despesas.
+function OverviewTab({ reminderItems, reminderError, uberNet, salaryIncome, tiktokIncome, generalExpenseRows, sourceWarning }) {
+  const totalIncome = roundMoney(uberNet + salaryIncome + tiktokIncome);
   const totalExpense = sumAmounts(generalExpenseRows);
   const balance = roundMoney(totalIncome - totalExpense);
   const expenseByCategory = useMemo(() => {
@@ -184,7 +184,7 @@ function OverviewTab({ reminderItems, reminderError, uberIncome, salaryIncome, t
   ];
 
   const summaryItems = [
-    { label: "Receitas Uber", value: uberIncome, tone: "green" },
+    { label: "Saldo Uber", value: uberNet, tone: uberNet < 0 ? "red" : "green" },
     { label: "Receitas Salário", value: salaryIncome, tone: "green" },
     { label: "Receitas TikTok", value: tiktokIncome, tone: "green" },
     ...expenseByCategory.map(([label, value]) => ({ label: getPersonalExpenseCategoryLabel(label), value, tone: "red" })),
@@ -337,7 +337,8 @@ export default function Dashboard() {
   const [tiktokState, setTiktokState] = useState({ loading: true, error: "" });
 
   const monthRecords = useMemo(() => filterRecordsByMonth(records, month), [records, month]);
-  const uberIncome = useMemo(() => roundMoney(summarizeRecords(monthRecords).income), [monthRecords]);
+  // Uber entra no Dashboard pelo saldo (receitas − gastos registrados na Uber), não pelo bruto.
+  const uberNet = useMemo(() => roundMoney(summarizeRecords(monthRecords).profit), [monthRecords]);
   const salaryIncome = useMemo(() => getSalaryTotalForMonth(salaryReceipts, month), [salaryReceipts, month]);
   const tiktokIncome = useMemo(
     () => (tiktokData.month === month ? getTikTokSalesTotal(tiktokData.sales, month) : 0),
@@ -422,7 +423,7 @@ export default function Dashboard() {
           <OverviewTab
             reminderItems={reminderItems}
             reminderError={reminderError}
-            uberIncome={uberIncome}
+            uberNet={uberNet}
             salaryIncome={salaryIncome}
             tiktokIncome={tiktokIncome}
             generalExpenseRows={generalExpenseRows}
