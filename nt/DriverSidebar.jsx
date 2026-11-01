@@ -28,6 +28,19 @@ function SidebarIcon({ children }) {
 }
 
 const icons = {
+  calendar: (
+    <SidebarIcon>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 10h18" />
+      <path d="M8 14h2M14 14h2M8 17h2" />
+    </SidebarIcon>
+  ),
+  layers: (
+    <SidebarIcon>
+      <path d="m12 3 9 5-9 5-9-5z" />
+      <path d="m3 13 9 5 9-5" />
+    </SidebarIcon>
+  ),
   dashboard: (
     <SidebarIcon>
       <path d="M3 10.5 12 3l9 7.5" />
@@ -123,13 +136,16 @@ const personalPrimaryItems = [
 export default function DriverSidebar({ user }) {
   const adminItems = user?.isAdmin
     ? [
-        { to: "/driver/notes", label: "Bloco de notas", icon: icons.notes },
+        { to: "/driver/controle-mes", label: "Controle do Mês", icon: icons.calendar },
+        { to: "/driver/dividas", label: "Dívidas Antigas", icon: icons.layers },
         { to: "/driver/users", label: "Usuários", icon: icons.users },
       ]
     : [];
 
   const primaryItems = isPessoalProfile(user?.profileType) ? personalPrimaryItems : driverPrimaryItems;
-  const navItems = [...primaryItems, ...adminItems];
+  // Dívidas Antigas: para todos os motoristas (para o admin aparece logo abaixo de Controle do Mês).
+  const debtsItem = isPessoalProfile(user?.profileType) || user?.isAdmin ? [] : [{ to: "/driver/dividas", label: "Dívidas Antigas", icon: icons.layers }];
+  const navItems = [...primaryItems, ...debtsItem, ...adminItems];
 
   return (
     <aside className="sidebar">

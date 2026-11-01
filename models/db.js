@@ -605,6 +605,54 @@ const initPostgresDb = async () => {
   `);
   await query('CREATE INDEX IF NOT EXISTS idx_goal_redistributions_user_month ON goal_redistributions(user_id, year_month)');
 
+  // Controle do Mês: lançamentos do grupo (valores em centavos inteiros). Módulo independente.
+  await query(`
+    CREATE TABLE IF NOT EXISTS month_control_entries (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      description TEXT NOT NULL,
+      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+      payer TEXT NOT NULL CHECK (payer IN ('nathan', 'mauricio', 'lene', 'isaque')),
+      entry_type TEXT NOT NULL CHECK (entry_type IN ('individual', 'geral', 'cartao')),
+      due_date TEXT,
+      payment_status TEXT NOT NULL DEFAULT 'pago' CHECK (payment_status IN ('pago', 'pendente')),
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_month_control_entries_user_month ON month_control_entries(user_id, year_month)');
+
+  // Dívidas Antigas: dívidas e histórico de pagamentos (centavos inteiros). Módulo independente.
+  await query(`
+    CREATE TABLE IF NOT EXISTS old_debts (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL,
+      creditor TEXT,
+      original_cents INTEGER NOT NULL CHECK (original_cents > 0),
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query(`
+    CREATE TABLE IF NOT EXISTS old_debt_payments (
+      id BIGSERIAL PRIMARY KEY,
+      debt_id BIGINT NOT NULL REFERENCES old_debts(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+      paid_on TEXT NOT NULL,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_old_debts_user ON old_debts(user_id)');
+  await query('CREATE INDEX IF NOT EXISTS idx_old_debt_payments_debt ON old_debt_payments(debt_id)');
+
   // Aba Salário: recebimentos de salário e benefícios (independente das despesas gerais).
   await query(`
     CREATE TABLE IF NOT EXISTS salary_receipts (
@@ -865,6 +913,49 @@ const initSqliteDb = async () => {
     );
 
     CREATE INDEX IF NOT EXISTS idx_goal_redistributions_user_month ON goal_redistributions(user_id, year_month);
+
+    CREATE TABLE IF NOT EXISTS month_control_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year_month TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      description TEXT NOT NULL,
+      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+      payer TEXT NOT NULL CHECK (payer IN ('nathan', 'mauricio', 'lene', 'isaque')),
+      entry_type TEXT NOT NULL CHECK (entry_type IN ('individual', 'geral', 'cartao')),
+      due_date TEXT,
+      payment_status TEXT NOT NULL DEFAULT 'pago' CHECK (payment_status IN ('pago', 'pendente')),
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_month_control_entries_user_month ON month_control_entries(user_id, year_month);
+
+    CREATE TABLE IF NOT EXISTS old_debts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL,
+      creditor TEXT,
+      original_cents INTEGER NOT NULL CHECK (original_cents > 0),
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS old_debt_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      debt_id INTEGER NOT NULL REFERENCES old_debts(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+      paid_on TEXT NOT NULL,
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_old_debts_user ON old_debts(user_id);
+    CREATE INDEX IF NOT EXISTS idx_old_debt_payments_debt ON old_debt_payments(debt_id);
 
     CREATE TABLE IF NOT EXISTS expense_categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

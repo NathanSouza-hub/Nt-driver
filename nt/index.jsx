@@ -7,9 +7,10 @@ import Dashboard from "./Dashboard";
 import { isPessoalProfile } from "./profile-type";
 import { ExpensesPage } from "./ExpensesModule";
 import { SummaryPage } from "./GoalsPage";
+import { MonthControlPage } from "./MonthControlPage";
+import { OldDebtsPage } from "./OldDebtsPage";
 import {
   HistoryPage,
-  NotesPage,
   PerformancePage,
   PersonalDashboardPage,
   PersonalReceitasPage,
@@ -41,7 +42,8 @@ root.render(
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="receitas" element={<PersonalReceitasPage />} />
           <Route path="resumo" element={<PersonalResumoPage />} />
-          <Route path="notes" element={<NotesPage />} />
+          <Route path="controle-mes" element={<MonthControlPage />} />
+          <Route path="dividas" element={<OldDebtsPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

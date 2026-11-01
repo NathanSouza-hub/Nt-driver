@@ -16,6 +16,8 @@ const summaryGoalsRouter = require('./routes/summary-goals');
 const salaryRouter = require('./routes/salary');
 const tiktokRouter = require('./routes/tiktok');
 const expensesRouter = require('./routes/expenses');
+const monthControlRouter = require('./routes/month-control');
+const oldDebtsRouter = require('./routes/old-debts');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'nt-driver-dev-secret';
@@ -127,6 +129,8 @@ app.use('/api/summary-goals', summaryGoalsRouter);
 app.use('/api/salary', salaryRouter);
 app.use('/api/tiktok', tiktokRouter);
 app.use('/api/expenses', expensesRouter);
+app.use('/api/month-control', monthControlRouter);
+app.use('/api/old-debts', oldDebtsRouter);
 
 app.get('/healthz', (req, res) => {
   res.status(200).json({ ok: true, service: 'nt-driver' });

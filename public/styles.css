@@ -5487,3 +5487,750 @@ select {
     grid-template-columns: 1fr 1fr 1fr;
   }
 }
+
+/* ===== Controle do Mês e Dívidas Antigas (classes mc-* e debt-*) ===== */
+.mc-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mc-title-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 1.6rem;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.mc-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.mc-topbar .area-subtabs,
+.mc-month-nav {
+  margin: 0;
+}
+
+.mc-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mc-section-title {
+  margin: 8px 0 14px;
+}
+
+/* Cards de pessoa */
+.mc-person-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card.mc-person-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 20px;
+}
+
+.card.mc-person-card.is-isaque {
+  background: rgb(var(--glass-mid) / 0.95);
+  border-style: dashed;
+}
+
+.mc-person-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mc-person-info small {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.card .mc-person-info strong {
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mc-person-info em {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Card da lista (lançamentos e dívidas) */
+.card.mc-entries-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 22px;
+  margin-bottom: 18px;
+}
+
+.mc-entries-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mc-entries-toolbar .mc-new-btn {
+  margin-left: auto;
+  width: auto;
+  padding: 11px 20px;
+  white-space: nowrap;
+}
+
+.mc-table-wrap {
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.personal-table.mc-table {
+  min-width: 720px;
+}
+
+.mc-table th {
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+.mc-table td {
+  vertical-align: middle;
+}
+
+.mc-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mc-table .is-money {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-table .is-actions {
+  text-align: center;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.card .mc-table strong {
+  display: inline;
+  font-size: inherit;
+}
+
+.card .mc-table .mc-entry-title {
+  display: block;
+  font-weight: 700;
+}
+
+.mc-entry-notes {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.mc-pending-pill {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  vertical-align: middle;
+}
+
+.mc-table tr.is-pending {
+  background: rgba(245, 158, 11, 0.07);
+}
+
+.mc-table tr.is-pending td:first-child {
+  box-shadow: inset 3px 0 0 var(--orange);
+}
+
+.mc-payer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.mc-actions {
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.mc-actions .icon-action-btn {
+  width: 34px;
+  height: 34px;
+  font-size: 0.9rem;
+}
+
+/* Formulários dos modais */
+.mc-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mc-form-grid .goal-redistribution-error {
+  grid-column: 1 / -1;
+}
+
+.mc-payer-picker {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mc-payer-picker button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-soft);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mc-payer-picker button.is-active {
+  border-color: var(--blue);
+  background: rgba(59, 130, 246, 0.14);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.mc-status-picker {
+  width: fit-content;
+}
+
+.mc-duplicate-box {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.mc-duplicate-box p {
+  margin: 0;
+}
+
+/* Fechamento */
+.mc-closing {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.mc-closing-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mc-closing-summary span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.mc-closing-summary strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-closing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card.mc-closing-card {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 22px;
+  border-top: 4px solid var(--blue);
+}
+
+.card.mc-closing-card.is-receber {
+  border-top-color: var(--green);
+}
+
+.card.mc-closing-card.is-pagar {
+  border-top-color: var(--red);
+}
+
+.mc-closing-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card .mc-closing-head strong {
+  font-size: 1.1rem;
+  flex: 1 1 auto;
+}
+
+.mc-status-pill {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--blue-soft);
+}
+
+.mc-status-pill.is-receber {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--green-soft);
+}
+
+.mc-status-pill.is-pagar {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--red-soft);
+}
+
+.mc-closing-card dl {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.mc-closing-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mc-closing-card dt {
+  color: var(--muted);
+}
+
+.mc-closing-card dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-closing-result {
+  display: grid;
+  gap: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.mc-closing-result small {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.card .mc-closing-result strong {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-closing-card.is-receber .mc-closing-result strong {
+  color: var(--green-soft);
+}
+
+.mc-closing-card.is-pagar .mc-closing-result strong {
+  color: var(--red-soft);
+}
+
+/* Dívidas Antigas */
+.debt-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card.debt-stat {
+  display: grid;
+  gap: 6px;
+  padding: 18px 20px;
+  border-radius: 20px;
+}
+
+.debt-stat small {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.card.debt-stat strong {
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.card.debt-stat.is-total {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+.card.debt-stat.is-paid {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.24);
+}
+
+.card.debt-stat.is-paid strong {
+  color: var(--green-soft);
+}
+
+.card.debt-stat.is-remaining {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.26);
+}
+
+.card.debt-stat.is-count {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.22);
+}
+
+.debt-search {
+  flex: 0 1 300px;
+  min-width: 180px;
+  margin-left: auto;
+}
+
+.mc-entries-toolbar .debt-search + .mc-new-btn {
+  margin-left: 0;
+}
+
+.debt-table tr.is-settled td {
+  color: var(--muted);
+}
+
+.debt-table .status-pill {
+  white-space: nowrap;
+}
+
+.debt-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.debt-details-grid > div {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  justify-items: start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+}
+
+.debt-details-grid small,
+.debt-notes small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.debt-details-grid strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-details-grid .is-paid {
+  color: var(--green-soft);
+}
+
+.debt-details-grid .is-remaining {
+  color: var(--amber-soft);
+}
+
+.debt-notes {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.debt-payments-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.debt-payments-head h3 {
+  margin: 0;
+}
+
+.debt-pay-btn {
+  width: auto;
+  padding: 9px 16px;
+}
+
+.debt-payment-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.debt-payment-fields,
+.mc-form-grid {
+  align-items: start;
+}
+
+.debt-payment-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.debt-payment-fields .area-field,
+.mc-form-grid .area-field {
+  align-content: start;
+}
+
+.debt-payments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.debt-payments-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+}
+
+.debt-payments-list li > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.debt-payments-list strong {
+  color: var(--green-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-payments-list small {
+  color: var(--muted);
+}
+
+@media (max-width: 1000px) {
+  .mc-person-grid,
+  .debt-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mc-closing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Celular: a tabela vira uma lista de cards */
+@media (max-width: 760px) {
+  .mc-topbar {
+    justify-content: center;
+  }
+
+  .mc-title-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 1.3rem;
+  }
+
+  .card.mc-entries-card {
+    padding: 14px;
+  }
+
+  .mc-entries-toolbar > * {
+    flex: 1 1 100%;
+  }
+
+  .mc-entries-toolbar .expense-segmented {
+    overflow-x: auto;
+  }
+
+  .mc-entries-toolbar .expense-segmented button {
+    flex: 1 0 auto;
+  }
+
+  .mc-entries-toolbar .mc-new-btn,
+  .debt-search {
+    margin-left: 0;
+  }
+
+  .mc-table-wrap {
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+  }
+
+  .personal-table.responsive-table {
+    min-width: 0;
+  }
+
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table,
+  .responsive-table tbody,
+  .responsive-table tr,
+  .responsive-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-table tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .responsive-table tr {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 4px 14px;
+    background: var(--panel);
+  }
+
+  .responsive-table td,
+  .mc-table .is-money,
+  .mc-table .is-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 0;
+    text-align: right;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: left;
+    flex: 0 0 auto;
+  }
+
+  .responsive-table td::before {
+    margin-right: auto;
+  }
+
+  .responsive-table tbody td {
+    background: transparent;
+  }
+
+  .responsive-table td[data-label="Descrição"] {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px 8px;
+  }
+
+  .responsive-table td[data-label="Descrição"] .mc-pending-pill {
+    margin-left: 0;
+  }
+
+  .responsive-table td[data-label="Descrição"] .mc-entry-notes {
+    flex-basis: 100%;
+    text-align: right;
+  }
+
+  .mc-table.responsive-table tr.is-pending {
+    background: rgba(245, 158, 11, 0.08);
+  }
+
+  .mc-title {
+    font-size: 0.82em;
+    gap: 10px;
+  }
+
+  .responsive-table td:first-child {
+    display: block;
+    text-align: left;
+    padding-top: 10px;
+  }
+
+  .responsive-table td:first-child::before {
+    display: none;
+  }
+
+  .responsive-table tr.is-pending td:first-child {
+    box-shadow: none;
+  }
+
+  .responsive-table tr.is-pending {
+    border-left: 4px solid var(--orange);
+  }
+
+  .responsive-table td:last-child {
+    border-bottom: none;
+  }
+
+  .mc-form-grid,
+  .debt-payment-fields,
+  .debt-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mc-payer-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mc-closing-summary span {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 420px) {
+  .card.mc-person-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .card .mc-person-info strong,
+  .card.debt-stat strong {
+    font-size: 1.1rem;
+  }
+}
