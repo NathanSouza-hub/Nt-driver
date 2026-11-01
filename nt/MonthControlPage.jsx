@@ -59,7 +59,7 @@ function PersonCards({ entries }) {
   return (
     <div className="mc-person-grid">
       {PARTICIPANTS.map((participant) => (
-        <div key={participant.key} className={`card mc-person-card${participant.key === "isaque" ? " is-isaque" : ""}`}>
+        <div key={participant.key} className={`card mc-person-card nt-kanban${participant.key === "isaque" ? " is-isaque" : ""}`} style={{ "--nt-tone": participant.color || "#64748b" }}>
           <PersonAvatar participantKey={participant.key} />
           <div className="mc-person-info">
             <small>{participant.name}</small>
@@ -147,7 +147,7 @@ function ClosingView({ entries }) {
       ) : null}
       <div className="mc-closing-grid">
         {closing.people.map((person) => (
-          <div key={person.key} className={`card mc-closing-card is-${person.status}`}>
+          <div key={person.key} className={`card mc-closing-card nt-kanban is-${person.status} ${person.status === "receber" ? "nt-tone-green" : person.status === "pagar" ? "nt-tone-red" : "nt-tone-blue"}`}>
             <div className="mc-closing-head">
               <PersonAvatar participantKey={person.key} />
               <strong>{person.name}</strong>
@@ -256,24 +256,27 @@ function EntryModal({ month, editing, onClose, onSaved }) {
           </p>
           <div className="goal-dialog-buttons">
             <button type="button" className="auth-outline-button" onClick={() => setDuplicate(null)} disabled={saving}>Voltar e revisar</button>
-            <button type="button" className="auth-submit" onClick={() => save(true)} disabled={saving}>{saving ? "Salvando..." : "Salvar mesmo assim"}</button>
+            <button type="button" className="auth-submit auth-submit-blue" onClick={() => save(true)} disabled={saving}>{saving ? "Salvando..." : "Salvar mesmo assim"}</button>
           </div>
         </div>
       ) : (
         <div className="goal-dialog-buttons">
           <button type="button" className="auth-outline-button" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button type="submit" form="mc-entry-form" className="auth-submit" disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar alterações" : "Salvar lançamento"}</button>
+          <button type="submit" form="mc-entry-form" className="auth-submit auth-submit-blue" disabled={saving}>{saving ? "Salvando..." : editing ? "Salvar alterações" : "Salvar lançamento"}</button>
         </div>
       )}
     >
       <form
         id="mc-entry-form"
-        className="mc-form-grid"
+        className="nt-form"
         onSubmit={(event) => {
           event.preventDefault();
           save(false);
         }}
       >
+        <div className="nt-panel">
+        <strong className="nt-panel-title">Lançamento</strong>
+        <div className="nt-panel-grid">
         <div className="area-field">
           <label htmlFor="mc-date">Data</label>
           <input id="mc-date" type="date" style={areaFieldStyle} value={form.entry_date} onChange={(event) => update("entry_date", event.target.value)} required />
@@ -286,6 +289,11 @@ function EntryModal({ month, editing, onClose, onSaved }) {
           <label htmlFor="mc-description">Descrição</label>
           <input id="mc-description" maxLength={120} placeholder="Ex.: Mercado, Internet, Fatura do cartão" style={areaFieldStyle} value={form.description} onChange={(event) => update("description", event.target.value)} required />
         </div>
+        </div>
+        </div>
+        <div className="nt-panel nt-tone-green">
+        <strong className="nt-panel-title">Pagamento</strong>
+        <div className="nt-panel-grid">
         <div className="area-field area-field-wide">
           <label id="mc-payer-label">Quem pagou</label>
           <div className="mc-payer-picker" role="radiogroup" aria-labelledby="mc-payer-label">
@@ -330,7 +338,9 @@ function EntryModal({ month, editing, onClose, onSaved }) {
             </div>
           </>
         ) : null}
-        <div className="area-field area-field-wide">
+        </div>
+        </div>
+        <div className="area-field">
           <label htmlFor="mc-notes">Observação (opcional)</label>
           <input id="mc-notes" maxLength={500} style={areaFieldStyle} value={form.notes} onChange={(event) => update("notes", event.target.value)} />
         </div>
@@ -444,7 +454,7 @@ export function MonthControlPage() {
     <>
       <AreaToast toast={toast} />
       <PageHeader
-        title={<span className="mc-title"><span className="mc-title-icon" aria-hidden="true">🗓️</span>Controle do Mês</span>}
+        title="Controle do Mês"
         subtitle="Registro de gastos e acerto entre o grupo."
         centered
       />
@@ -464,8 +474,16 @@ export function MonthControlPage() {
       {tab === "lancamentos" ? (
         <>
           <PersonCards entries={entries} />
-          <div className="card mc-entries-card">
-            <div className="mc-entries-toolbar">
+          <section className="card nt-shell">
+            <div className="nt-shell-head">
+              <div>
+                <strong>Lançamentos de {getMonthLabel(month)}</strong>
+                <small>{filteredEntries.length === entries.length ? `${entries.length} lançamento${entries.length === 1 ? "" : "s"}` : `${filteredEntries.length} de ${entries.length} exibidos`}</small>
+              </div>
+              <button type="button" className="auth-submit auth-submit-blue nt-shell-btn" onClick={() => setModal({ editing: null })}>+ Novo lançamento</button>
+            </div>
+            <div className="nt-shell-body">
+            <div className="nt-toolbar">
               <div className="expense-segmented mc-person-filter" role="radiogroup" aria-label="Filtrar por pessoa">
                 {[{ key: "todos", name: "Todos" }, ...PARTICIPANTS].map((option) => (
                   <button key={option.key} type="button" role="radio" aria-checked={personFilter === option.key} className={personFilter === option.key ? "is-active" : ""} onClick={() => setPersonFilter(option.key)}>
@@ -473,7 +491,6 @@ export function MonthControlPage() {
                   </button>
                 ))}
               </div>
-              <button type="button" className="auth-submit mc-new-btn" onClick={() => setModal({ editing: null })}>+ Novo lançamento</button>
             </div>
             {isLoading && !entries.length ? (
               <p className="expense-list-empty">Carregando lançamentos...</p>
@@ -487,7 +504,8 @@ export function MonthControlPage() {
                 emptyText={entries.length ? "Nenhum lançamento desta pessoa no mês." : `Nenhum lançamento em ${getMonthLabel(month)}.`}
               />
             )}
-          </div>
+            </div>
+          </section>
         </>
       ) : null}
 
@@ -495,14 +513,18 @@ export function MonthControlPage() {
 
       {tab === "historico" ? (
         <>
-          <div className="card area-history-card">
-            <div className="area-history-toolbar">
-              <h2 style={{ margin: 0 }}>Meses anteriores</h2>
+          <section className="card nt-shell">
+            <div className="nt-shell-head">
+              <div>
+                <strong>Meses anteriores</strong>
+                <small>Escolha um mês para ver o fechamento e os lançamentos</small>
+              </div>
               <div className="area-field area-history-filter">
                 <label htmlFor="mc-history-month">Mês e ano</label>
                 <input id="mc-history-month" type="month" style={areaFieldStyle} value={selectedHistoryMonth} onChange={(event) => event.target.value && setHistoryMonth(event.target.value)} />
               </div>
             </div>
+            <div className="nt-shell-body">
             {historyMonths.length ? (
               <div className="area-history-months">
                 {historyMonths.map((item) => (
@@ -516,14 +538,22 @@ export function MonthControlPage() {
             ) : (
               <p style={{ margin: 0, color: "var(--muted)" }}>Ainda não há meses com lançamentos.</p>
             )}
-          </div>
+            </div>
+          </section>
           <h2 className="mc-section-title area-month-cell">{getMonthLabel(selectedHistoryMonth)}</h2>
           <PersonCards entries={history.entries} />
           <ClosingView entries={history.entries} />
-          <div className="card mc-entries-card">
-            <h2 style={{ margin: 0 }}>Lançamentos</h2>
-            <EntriesTable entries={history.entries} emptyText="Nenhum lançamento neste mês." />
-          </div>
+          <section className="card nt-shell">
+            <div className="nt-shell-head">
+              <div>
+                <strong>Lançamentos</strong>
+                <small>{history.entries.length} lançamento{history.entries.length === 1 ? "" : "s"} em {getMonthLabel(selectedHistoryMonth)}</small>
+              </div>
+            </div>
+            <div className="nt-shell-body">
+              <EntriesTable entries={history.entries} emptyText="Nenhum lançamento neste mês." />
+            </div>
+          </section>
         </>
       ) : null}
 
